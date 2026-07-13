@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * LeafMind theme tokens.
+ * Palette derived from the LeafMind logo: forest green, sage green,
+ * warm beige, white, and dark slate.
+ */
+:root {
+  --radius: 0.75rem;
+
+  /* Brand palette (logo-derived) */
+  --forest-50: oklch(0.97 0.02 145);
+  --forest-100: oklch(0.93 0.05 145);
+  --forest-200: oklch(0.85 0.08 145);
+  --forest-300: oklch(0.74 0.1 145);
+  --forest-400: oklch(0.62 0.11 145);
+  --forest-500: oklch(0.5 0.11 148);
+  --forest-600: oklch(0.4 0.1 150);
+  --forest-700: oklch(0.32 0.08 152);
+  --forest-800: oklch(0.25 0.06 152);
+  --forest-900: oklch(0.19 0.05 152);
+
+  --sage-100: oklch(0.92 0.04 118);
+  --sage-200: oklch(0.86 0.06 118);
+  --sage-300: oklch(0.78 0.08 118);
+  --sage-400: oklch(0.7 0.09 118);
+  --sage-500: oklch(0.62 0.09 118);
+
+  --beige-50: oklch(0.98 0.015 85);
+  --beige-100: oklch(0.96 0.02 85);
+  --beige-200: oklch(0.92 0.03 85);
+
+  --slate-800: oklch(0.28 0.02 255);
+  --slate-900: oklch(0.2 0.02 255);
+
+  /* shadcn/ui semantic tokens — light mode */
+  --background: var(--beige-50);
+  --foreground: var(--slate-900);
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--slate-900);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--slate-900);
+
+  --primary: var(--forest-600);
+  --primary-foreground: var(--beige-50);
+
+  --secondary: var(--sage-200);
+  --secondary-foreground: var(--forest-800);
+
+  --muted: var(--beige-100);
+  --muted-foreground: oklch(0.45 0.02 152);
+
+  --accent: var(--sage-100);
+  --accent-foreground: var(--forest-800);
+
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.98 0.01 27);
+
+  --border: var(--beige-200);
+  --input: var(--beige-200);
+  --ring: var(--forest-400);
+
+  --sidebar: var(--forest-900);
+  --sidebar-foreground: var(--beige-50);
+  --sidebar-primary: var(--forest-500);
+  --sidebar-primary-foreground: var(--beige-50);
+  --sidebar-accent: var(--forest-700);
+  --sidebar-accent-foreground: var(--beige-50);
+  --sidebar-border: var(--forest-700);
+  --sidebar-ring: var(--forest-400);
+
+  --success: oklch(0.6 0.13 152);
+  --success-foreground: oklch(0.98 0.01 152);
+  --warning: oklch(0.75 0.15 80);
+  --warning-foreground: oklch(0.2 0.02 80);
+}
+
+.dark {
+  --background: var(--slate-900);
+  --foreground: var(--beige-50);
+
+  --card: var(--slate-800);
+  --card-foreground: var(--beige-50);
+
+  --popover: var(--slate-800);
+  --popover-foreground: var(--beige-50);
+
+  --primary: var(--forest-400);
+  --primary-foreground: var(--forest-900);
+
+  --secondary: oklch(0.3 0.02 255);
+  --secondary-foreground: var(--beige-50);
+
+  --muted: oklch(0.26 0.02 255);
+  --muted-foreground: oklch(0.68 0.02 152);
+
+  --accent: var(--forest-800);
+  --accent-foreground: var(--beige-50);
+
+  --destructive: oklch(0.65 0.2 27);
+  --destructive-foreground: oklch(0.98 0.01 27);
+
+  --border: oklch(0.32 0.02 255);
+  --input: oklch(0.32 0.02 255);
+  --ring: var(--forest-400);
+
+  --sidebar: oklch(0.15 0.02 255);
+  --sidebar-foreground: var(--beige-50);
+  --sidebar-primary: var(--forest-400);
+  --sidebar-primary-foreground: var(--forest-900);
+  --sidebar-accent: oklch(0.24 0.02 255);
+  --sidebar-accent-foreground: var(--beige-50);
+  --sidebar-border: oklch(0.28 0.02 255);
+  --sidebar-ring: var(--forest-400);
+
+  --success: oklch(0.65 0.14 152);
+  --success-foreground: oklch(0.15 0.02 152);
+  --warning: oklch(0.78 0.14 80);
+  --warning-foreground: oklch(0.2 0.02 80);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-forest-50: var(--forest-50);
+  --color-forest-100: var(--forest-100);
+  --color-forest-200: var(--forest-200);
+  --color-forest-300: var(--forest-300);
+  --color-forest-400: var(--forest-400);
+  --color-forest-500: var(--forest-500);
+  --color-forest-600: var(--forest-600);
+  --color-forest-700: var(--forest-700);
+  --color-forest-800: var(--forest-800);
+  --color-forest-900: var(--forest-900);
+
+  --color-sage-100: var(--sage-100);
+  --color-sage-200: var(--sage-200);
+  --color-sage-300: var(--sage-300);
+  --color-sage-400: var(--sage-400);
+  --color-sage-500: var(--sage-500);
+
+  --color-beige-50: var(--beige-50);
+  --color-beige-100: var(--beige-100);
+  --color-beige-200: var(--beige-200);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+}
