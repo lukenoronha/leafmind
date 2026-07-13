@@ -1,0 +1,21 @@
+{
+  "dataset_name": "LeafMind Medicinal Leaf Images",
+  "dataset_version": "3.0.0",
+  "total_classes": 37,
+  "total_images": 1932,
+  "merged_classes": [
+    {
+      "result_folder": "Putranjiva_roxburghii",
+      "source_folders": ["Putranjiva roxburghii", "Putranjiva roxburghii (1)"],
+      "image_count": 69,
+      "collisions_renamed": 21
+    }
+  ],
+  "removed_empty_classes": [
+    "Solanum xanthocarpum",
+    "aristolochia indica aristolochiaceae",
+    "vetiveria zizanioides poaceae"
+  ],
+  "classes_pending_manual_verification": 5,
+  "creation_date": "2026-07-13"
+}
