@@ -8,6 +8,8 @@ import SignupPage from '@/pages/auth/SignupPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
 import HomePage from '@/pages/HomePage'
+import HistoryPage from '@/pages/history/HistoryPage'
+import SavedReportsPage from '@/pages/saved-reports/SavedReportsPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import UserPage from '@/pages/user/UserPage'
 import DeveloperPage from '@/pages/developer/DeveloperPage'
@@ -31,6 +33,8 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: ROUTES.home, element: <HomePage /> },
+          { path: ROUTES.history, element: <HistoryPage /> },
+          { path: ROUTES.savedReports, element: <SavedReportsPage /> },
           { path: ROUTES.dashboard, element: <DashboardPage /> },
           { path: ROUTES.user, element: <UserPage /> },
           { path: ROUTES.settings, element: <SettingsPage /> },

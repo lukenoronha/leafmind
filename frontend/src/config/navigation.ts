@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  BookMarked,
+  History,
   LayoutDashboard,
-  Leaf,
+  Sparkles,
   Settings,
   ShieldCheck,
   TerminalSquare,
@@ -19,8 +21,10 @@ export interface NavItem {
 }
 
 export const primaryNavItems: NavItem[] = [
+  { label: 'New Analysis', to: ROUTES.home, icon: Sparkles },
+  { label: 'History', to: ROUTES.history, icon: History },
+  { label: 'Saved Reports', to: ROUTES.savedReports, icon: BookMarked },
   { label: 'Dashboard', to: ROUTES.dashboard, icon: LayoutDashboard },
-  { label: 'Identify', to: ROUTES.home, icon: Leaf },
   { label: 'Account', to: ROUTES.user, icon: User },
   {
     label: 'Developer',

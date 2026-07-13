@@ -8,7 +8,13 @@ application for medicinal plant identification and reasoning.
 - **Sprint 2** delivered a complete authentication system — login,
   signup, password reset, session handling, JWT persistence, and
   role-based access control — wired against placeholder FastAPI
-  endpoints. AI features and RAG integration land in later sprints.
+  endpoints.
+- **Sprint 3** delivered the User Portal — a Gemini-inspired workflow
+  for uploading a plant photo, viewing its identification and health
+  report, and asking follow-up questions in a chat interface, plus
+  History and Saved Reports views. Chat consumes the placeholder
+  `/predict` response as-is; retrieval-augmented generation is not
+  implemented yet.
 
 ## Tech Stack
 
@@ -119,6 +125,18 @@ src/
 - **UI components**: `src/components/ui` is managed by the shadcn CLI
   (`npx shadcn@latest add <component>`). Prefer adding new primitives
   through the CLI rather than hand-writing them.
+- **Analysis workflow**: `src/pages/HomePage.tsx` ("New Analysis")
+  orchestrates upload → predict → results. `src/hooks/use-image-upload.ts`
+  and `src/hooks/use-predict.ts` wrap the `/upload` and `/predict`
+  mutations (with upload progress); `src/hooks/use-analysis-chat.ts`
+  drives the chat panel, sending each message to `/predict/chat` and
+  appending whatever comes back — there is no retrieval step yet.
+  `src/components/analysis/` holds the feature's components
+  (`ImageUploader`, `PredictionCard`, `HealthReportCard`,
+  `AnalysisSessionList`, and the `chat/` subfolder). History and Saved
+  Reports (`src/pages/history`, `src/pages/saved-reports`) both read
+  from `/history` via `src/hooks/use-analysis-history.ts` and render
+  through the same `AnalysisSessionList`.
 
 ## Adding shadcn/ui Components
 

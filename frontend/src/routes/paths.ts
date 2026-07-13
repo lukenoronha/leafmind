@@ -7,6 +7,8 @@ export const ROUTES = {
   sessionExpired: '/session-expired',
   unauthorized: '/unauthorized',
   dashboard: '/dashboard',
+  history: '/history',
+  savedReports: '/saved-reports',
   user: '/user',
   developer: '/developer',
   admin: '/admin',

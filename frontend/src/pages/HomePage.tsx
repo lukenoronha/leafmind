@@ -1,19 +1,113 @@
-import { Leaf } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 import { PageHeader } from '@/components/common/PageHeader'
-import { EmptyState } from '@/components/common/EmptyState'
+import { ErrorState } from '@/components/common/ErrorState'
+import {
+  ImageUploader,
+  type UploadStatus,
+} from '@/components/analysis/ImageUploader'
+import { PredictionCard } from '@/components/analysis/PredictionCard'
+import { HealthReportCard } from '@/components/analysis/HealthReportCard'
+import { ChatPanel } from '@/components/analysis/chat/ChatPanel'
+import { useImageUpload } from '@/hooks/use-image-upload'
+import { usePredict } from '@/hooks/use-predict'
+import { useAnalysisChat } from '@/hooks/use-analysis-chat'
+import { getApiErrorMessage } from '@/lib/api-error'
+import type { HealthReport, Prediction } from '@/types/analysis'
 
 export default function HomePage() {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [result, setResult] = useState<{
+    prediction: Prediction
+    report: HealthReport
+  } | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+
+  const { upload, isUploading, progress, reset: resetUpload } = useImageUpload()
+  const { predict, isPredicting, reset: resetPredict } = usePredict()
+  const chat = useAnalysisChat(result?.prediction.id ?? '')
+
+  const status: UploadStatus = analysisError
+    ? 'error'
+    : isUploading
+      ? 'uploading'
+      : isPredicting
+        ? 'processing'
+        : 'idle'
+
+  async function handleFileSelected(file: File) {
+    setAnalysisError(null)
+    setResult(null)
+    const objectUrl = URL.createObjectURL(file)
+    setPreviewUrl(objectUrl)
+
+    try {
+      const { data: image } = await upload(file)
+      const { data } = await predict({ imageId: image.id })
+      setResult(data)
+    } catch (error) {
+      setAnalysisError(
+        getApiErrorMessage(error, 'Unable to analyze this image.'),
+      )
+      toast.error('Analysis failed. Please try again.')
+    }
+  }
+
+  function handleClear() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+    setResult(null)
+    setAnalysisError(null)
+    resetUpload()
+    resetPredict()
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Identify"
-        description="Upload a leaf photo to identify medicinal plants."
+        title="New Analysis"
+        description="Upload a leaf photo to identify the plant and get a medicinal health report."
       />
-      <EmptyState
-        icon={Leaf}
-        title="Identification workspace coming soon"
-        description="The vision-language identification flow will live here."
-      />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <ImageUploader
+            status={status}
+            progress={progress}
+            errorMessage={analysisError ?? undefined}
+            previewUrl={previewUrl}
+            onFileSelected={handleFileSelected}
+            onClear={handleClear}
+          />
+
+          {analysisError ? (
+            <ErrorState
+              title="Analysis failed"
+              description={analysisError}
+              onRetry={handleClear}
+            />
+          ) : null}
+
+          {result ? <PredictionCard prediction={result.prediction} /> : null}
+          {result ? <HealthReportCard report={result.report} /> : null}
+        </div>
+
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          {result ? (
+            <ChatPanel
+              plantName={result.prediction.plantName}
+              messages={chat.messages}
+              isSending={chat.isSending}
+              onSendMessage={chat.sendMessage}
+              className="h-[calc(100vh-14rem)] min-h-112"
+            />
+          ) : (
+            <div className="text-muted-foreground flex h-64 items-center justify-center rounded-xl border border-dashed text-center text-sm lg:h-[calc(100vh-14rem)] lg:min-h-112">
+              Upload a plant photo to start a conversation about it.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
