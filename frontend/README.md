@@ -21,6 +21,10 @@ application for medicinal plant identification and reasoning.
   backend-suggested follow-up questions, and conversation persistence.
   Retrieval logic itself lives entirely server-side — the frontend only
   consumes the new RAG endpoints and renders what they return.
+- **Sprint 5** delivered the Developer Dashboard — a read-only,
+  explainability-focused surface (not administrative management)
+  covering KPIs, an AI pipeline visualizer, prediction/RAG analytics, a
+  Prompt Inspector, filterable logs, and system component status.
 
 ## Tech Stack
 
@@ -168,6 +172,32 @@ src/
   `sources` event. `ConfidenceBadge` is shared across prediction match
   confidence, per-source retrieval confidence, and final response
   confidence for a consistent visual language.
+- **Developer dashboard**: `src/pages/developer/DeveloperPage.tsx`
+  (role-gated to `developer`/`admin` via the router's `RoleGuard`) is a
+  read-only view into how the identification and RAG pipeline behaved
+  — built for explainability and research transparency, not for
+  managing users or settings. It's organized as tabs, each backed by
+  its own `useQuery` hook in `src/hooks/use-developer-dashboard.ts`
+  against `src/services/developer.service.ts`:
+  - **Pipeline** — `PipelineVisualizer` renders every processing stage
+    (upload → preprocess → inference → embedding → retrieval →
+    generation → response) with per-stage status and duration.
+  - **Analytics** — `PredictionAnalyticsPanel` (confidence, latency,
+    processing time, model version per prediction) and
+    `RagAnalyticsPanel` (avg. retrieved documents, similarity score,
+    retrieval time, embedding model, vector count).
+  - **Prompt inspector** — `PromptInspector` is a master-detail view
+    over question/prediction/retrieved-context/response tuples, reusing
+    the same source-metadata and `ConfidenceBadge` treatment as the
+    chat's Sources panel.
+  - **Logs** — `LogsViewer` filters by level via the `LogFilters`
+    query param (refetches through React Query) and by free-text search
+    client-side.
+  - **System** — `SystemStatusGrid` shows backend/database/ChromaDB/
+    model health as independent cards.
+    KPI cards (`KpiGrid`) and system status poll every 30s via
+    `refetchInterval`; the rest load once per mount. All of it is
+    read-only against `GET` endpoints — no mutations.
 
 ## Adding shadcn/ui Components
 
