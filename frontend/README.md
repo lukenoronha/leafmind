@@ -12,9 +12,15 @@ application for medicinal plant identification and reasoning.
 - **Sprint 3** delivered the User Portal — a Gemini-inspired workflow
   for uploading a plant photo, viewing its identification and health
   report, and asking follow-up questions in a chat interface, plus
-  History and Saved Reports views. Chat consumes the placeholder
-  `/predict` response as-is; retrieval-augmented generation is not
+  History and Saved Reports views. Chat consumed the placeholder
+  `/predict` response as-is; retrieval-augmented generation was not
   implemented yet.
+- **Sprint 4** upgraded the chatbot into a RAG interface: streaming
+  responses, a three-stage retrieval status indicator, a collapsible
+  Sources panel with per-document confidence, response confidence,
+  backend-suggested follow-up questions, and conversation persistence.
+  Retrieval logic itself lives entirely server-side — the frontend only
+  consumes the new RAG endpoints and renders what they return.
 
 ## Tech Stack
 
@@ -128,15 +134,40 @@ src/
 - **Analysis workflow**: `src/pages/HomePage.tsx` ("New Analysis")
   orchestrates upload → predict → results. `src/hooks/use-image-upload.ts`
   and `src/hooks/use-predict.ts` wrap the `/upload` and `/predict`
-  mutations (with upload progress); `src/hooks/use-analysis-chat.ts`
-  drives the chat panel, sending each message to `/predict/chat` and
-  appending whatever comes back — there is no retrieval step yet.
-  `src/components/analysis/` holds the feature's components
-  (`ImageUploader`, `PredictionCard`, `HealthReportCard`,
-  `AnalysisSessionList`, and the `chat/` subfolder). History and Saved
-  Reports (`src/pages/history`, `src/pages/saved-reports`) both read
-  from `/history` via `src/hooks/use-analysis-history.ts` and render
-  through the same `AnalysisSessionList`.
+  mutations (with upload progress). `src/components/analysis/` holds
+  the feature's components (`ImageUploader`, `PredictionCard`,
+  `HealthReportCard`, `AnalysisSessionList`, `ConfidenceBadge`, and the
+  `chat/` subfolder). History and Saved Reports (`src/pages/history`,
+  `src/pages/saved-reports`) both read from `/history` via
+  `src/hooks/use-analysis-history.ts` and render through the same
+  `AnalysisSessionList`.
+- **RAG chat**: `src/hooks/use-analysis-chat.ts` drives the chat panel.
+  It streams `/predict/chat/stream` via `src/lib/stream-client.ts`,
+  which parses newline-delimited JSON (NDJSON) events over the
+  fetch Streams API — Axios's browser adapters don't expose a response
+  body incrementally, so this one endpoint bypasses `api-client.ts` and
+  talks to `env.apiBaseUrl` directly, attaching the same bearer token.
+  Every other request still goes through the shared Axios client.
+  Expected event shape (see `ChatStreamEvent` in `stream-client.ts`):
+  `{ type: 'status', stage }` → `{ type: 'sources', sources }` →
+  repeated `{ type: 'token', content }` → `{ type: 'done', ... }` (or
+  `{ type: 'error', message }`). The hook does no retrieval itself; it
+  only renders the stages, sources, and tokens the backend emits.
+  Conversations persist to `localStorage` per prediction ID via
+  `src/lib/chat-storage.ts`, so returning to the same analysis restores
+  the conversation. Backend-suggested follow-up questions come from
+  `src/hooks/use-follow-up-questions.ts` (`GET
+/predict/{predictionId}/follow-ups`), falling back to a generic
+  prompt set until the backend responds.
+- **Retrieval status & sources**:
+  `src/components/analysis/chat/RetrievalStatusIndicator.tsx` renders
+  the Searching → Retrieved → Generating pipeline from the `status`
+  events. `src/components/analysis/chat/SourcesPanel.tsx` is a
+  collapsible list of retrieved documents (title, chapter, page number,
+  retrieval confidence) attached to each assistant message via the
+  `sources` event. `ConfidenceBadge` is shared across prediction match
+  confidence, per-source retrieval confidence, and final response
+  confidence for a consistent visual language.
 
 ## Adding shadcn/ui Components
 

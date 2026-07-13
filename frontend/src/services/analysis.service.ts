@@ -1,5 +1,6 @@
 import type { AxiosProgressEvent } from 'axios'
 import { apiClient } from '@/lib/api-client'
+import { streamChat, type ChatStreamEvent } from '@/lib/stream-client'
 import type {
   AnalysisSession,
   ChatMessage,
@@ -23,9 +24,9 @@ export interface ChatPayload {
 }
 
 /**
- * Analysis service mirroring the FastAPI vision endpoints from Sprint 1's
- * contract. The backend is a placeholder — these calls will fail until
- * /upload, /predict, and /history exist server-side.
+ * Analysis service mirroring the FastAPI vision + RAG endpoints. The
+ * backend is a placeholder — these calls will fail until /upload,
+ * /predict, /history, and the RAG chat endpoints exist server-side.
  */
 export const analysisService = {
   uploadImage: (file: File, options?: UploadOptions) => {
@@ -58,6 +59,21 @@ export const analysisService = {
   saveReport: (predictionId: string) =>
     apiClient.post<void>(`/history/${predictionId}/save`),
 
+  /** Non-streaming chat, kept as a fallback if streaming is unavailable. */
   sendChatMessage: (payload: ChatPayload) =>
     apiClient.post<ChatMessage>('/predict/chat', payload),
+
+  /**
+   * Streams the RAG pipeline's progress and generated response as
+   * NDJSON events: retrieval status, retrieved sources, response
+   * tokens, then a final `done` event with the response confidence.
+   */
+  streamChatMessage: (
+    payload: ChatPayload,
+    signal?: AbortSignal,
+  ): AsyncGenerator<ChatStreamEvent> =>
+    streamChat('/predict/chat/stream', payload, signal),
+
+  getFollowUpQuestions: (predictionId: string) =>
+    apiClient.get<string[]>(`/predict/${predictionId}/follow-ups`),
 }

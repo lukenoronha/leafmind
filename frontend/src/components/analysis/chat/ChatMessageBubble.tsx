@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Markdown from 'react-markdown'
 import { Bot, Check, Copy, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ConfidenceBadge } from '@/components/analysis/ConfidenceBadge'
+import { SourcesPanel } from '@/components/analysis/chat/SourcesPanel'
 import type { ChatMessage } from '@/types/analysis'
 import { cn } from '@/lib/utils'
 
@@ -39,7 +41,7 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
 
       <div
         className={cn(
-          'flex max-w-[80%] flex-col gap-1',
+          'flex max-w-[85%] flex-col gap-1.5',
           isUser ? 'items-end' : 'items-start',
         )}
       >
@@ -52,24 +54,45 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           )}
         >
           <div className="prose prose-sm dark:prose-invert prose-p:my-1.5 prose-pre:my-2 prose-ul:my-1.5 prose-ol:my-1.5 max-w-none">
-            <Markdown>{message.content}</Markdown>
+            <Markdown>{message.content || ' '}</Markdown>
           </div>
+          {message.isStreaming ? (
+            <span
+              className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-current align-middle"
+              aria-hidden
+            />
+          ) : null}
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6 opacity-0 transition-opacity group-hover:opacity-100"
-          onClick={handleCopy}
-          aria-label="Copy message"
-        >
-          {copied ? (
-            <Check className="text-success size-3.5" />
-          ) : (
-            <Copy className="size-3.5" />
-          )}
-        </Button>
+        {!isUser && message.sources && message.sources.length > 0 ? (
+          <SourcesPanel sources={message.sources} className="w-full" />
+        ) : null}
+
+        <div className="flex items-center gap-2">
+          {!isUser && !message.isStreaming && message.responseConfidence ? (
+            <ConfidenceBadge
+              value={message.responseConfidence}
+              label="Response confidence"
+            />
+          ) : null}
+
+          {!message.isStreaming ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-6 opacity-0 transition-opacity group-hover:opacity-100"
+              onClick={handleCopy}
+              aria-label="Copy message"
+            >
+              {copied ? (
+                <Check className="text-success size-3.5" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   )

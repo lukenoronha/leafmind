@@ -12,6 +12,7 @@ import { ChatPanel } from '@/components/analysis/chat/ChatPanel'
 import { useImageUpload } from '@/hooks/use-image-upload'
 import { usePredict } from '@/hooks/use-predict'
 import { useAnalysisChat } from '@/hooks/use-analysis-chat'
+import { useFollowUpQuestions } from '@/hooks/use-follow-up-questions'
 import { getApiErrorMessage } from '@/lib/api-error'
 import type { HealthReport, Prediction } from '@/types/analysis'
 
@@ -26,6 +27,7 @@ export default function HomePage() {
   const { upload, isUploading, progress, reset: resetUpload } = useImageUpload()
   const { predict, isPredicting, reset: resetPredict } = usePredict()
   const chat = useAnalysisChat(result?.prediction.id ?? '')
+  const followUps = useFollowUpQuestions(result?.prediction.id ?? '')
 
   const status: UploadStatus = analysisError
     ? 'error'
@@ -98,6 +100,8 @@ export default function HomePage() {
               plantName={result.prediction.plantName}
               messages={chat.messages}
               isSending={chat.isSending}
+              stage={chat.stage}
+              followUpQuestions={followUps.data}
               onSendMessage={chat.sendMessage}
               className="h-[calc(100vh-14rem)] min-h-112"
             />
