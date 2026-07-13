@@ -1,0 +1,36 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+sqlalchemy==2.0.36
+alembic==1.14.0
+asyncpg==0.30.0
+greenlet==3.1.1
+psycopg2-binary==2.9.10
+loguru==0.7.3
+python-dotenv==1.0.1
+python-multipart==0.0.20
+httpx==0.28.1
+
+# --- Authentication (Sprint 2) ---
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+email-validator==2.2.0
+
+# --- Image Analysis Pipeline (Sprint 3) ---
+Pillow==11.0.0
+numpy==2.2.1
+opencv-python-headless==4.10.0.84
+
+# --- Qwen2.5-VL inference (Sprint 3) ---
+# Heavy ML dependencies. Installed but lazily imported/loaded — the app boots
+# and every other endpoint works even if these are absent or no GPU exists;
+# only /predict and /chat require them at call time (see app/inference/vlm/backend.py).
+torch==2.5.1
+transformers==4.47.1
+accelerate==1.2.1
+qwen-vl-utils==0.0.8
+
+# Future sprints (uncomment when implementing)
+# chromadb==0.5.23
