@@ -1,31 +1,24 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import type { UserRole } from '@/types/auth'
 import { ROUTES } from '@/routes/paths'
 import { Loader } from '@/components/common/Loader'
 
-interface ProtectedRouteProps {
-  allowedRoles?: UserRole[]
-}
-
 /**
- * Route guard placeholder. Gates on the client-side AuthProvider state
- * only — no token verification or backend calls yet. Real auth logic
- * (session checks, refresh, redirects) lands with the FastAPI auth API.
+ * Gates nested routes on authentication only. Role checks live in
+ * RoleGuard, nested inside this guard's subtree. On redirect, the
+ * attempted location is passed via state so LoginPage can send the
+ * user back after a successful sign-in.
  */
-export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth()
+export function ProtectedRoute() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return <Loader fullScreen label="Checking your session..." />
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={ROUTES.login} replace />
-  }
-
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to={ROUTES.home} replace />
+    return <Navigate to={ROUTES.login} state={{ from: location }} replace />
   }
 
   return <Outlet />

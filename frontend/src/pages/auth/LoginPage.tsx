@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import {
   Form,
@@ -14,6 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/routes/paths'
 import { AuthLayout } from '@/pages/auth/AuthLayout'
+import { useAuth } from '@/hooks/use-auth'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -22,14 +26,30 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
+interface LocationState {
+  from?: { pathname: string }
+}
+
 export default function LoginPage() {
+  const { login, isLoginPending } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
 
-  function onSubmit(_values: LoginFormValues) {
-    // Wiring only — authentication is implemented once the backend exists.
+  async function onSubmit(values: LoginFormValues) {
+    try {
+      const user = await login(values)
+      toast.success(`Welcome back, ${user.name}.`)
+      const state = location.state as LocationState | null
+      const redirectTo = state?.from?.pathname ?? ROUTES.dashboard
+      navigate(redirectTo, { replace: true })
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to sign in.'))
+    }
   }
 
   return (
@@ -49,6 +69,7 @@ export default function LoginPage() {
                   <Input
                     type="email"
                     placeholder="you@example.com"
+                    autoComplete="email"
                     {...field}
                   />
                 </FormControl>
@@ -61,16 +82,36 @@ export default function LoginPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Password</FormLabel>
+                  <Link
+                    to={ROUTES.forgotPassword}
+                    className="text-primary text-xs font-medium"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full">
-            Sign in
+          <Button type="submit" className="w-full" disabled={isLoginPending}>
+            {isLoginPending ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
           </Button>
         </form>
       </Form>

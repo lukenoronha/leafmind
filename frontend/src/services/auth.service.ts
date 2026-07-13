@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { AuthUser } from '@/types/auth'
+import type { AuthTokens, AuthUser } from '@/types/auth'
 
 export interface LoginPayload {
   email: string
@@ -12,14 +12,23 @@ export interface SignupPayload {
   password: string
 }
 
-export interface AuthResponse {
+export interface ForgotPasswordPayload {
+  email: string
+}
+
+export interface ResetPasswordPayload {
+  token: string
+  password: string
+}
+
+export interface AuthResponse extends AuthTokens {
   user: AuthUser
-  accessToken: string
 }
 
 /**
- * Placeholder auth service. Endpoints mirror the future FastAPI auth
- * router but are not called anywhere yet — no backend exists.
+ * Auth service mirroring the FastAPI auth router from Sprint 1. These
+ * endpoints are placeholders — the backend does not exist yet, so
+ * every call here will fail until it's implemented.
  */
 export const authService = {
   login: (payload: LoginPayload) =>
@@ -31,4 +40,13 @@ export const authService = {
   logout: () => apiClient.post<void>('/auth/logout'),
 
   getCurrentUser: () => apiClient.get<AuthUser>('/auth/me'),
+
+  refreshToken: (refreshToken: string) =>
+    apiClient.post<AuthTokens>('/auth/refresh', { refreshToken }),
+
+  forgotPassword: (payload: ForgotPasswordPayload) =>
+    apiClient.post<void>('/auth/forgot-password', payload),
+
+  resetPassword: (payload: ResetPasswordPayload) =>
+    apiClient.post<void>('/auth/reset-password', payload),
 }

@@ -1,6 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import {
   Form,
@@ -14,6 +16,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/routes/paths'
 import { AuthLayout } from '@/pages/auth/AuthLayout'
+import { useAuth } from '@/hooks/use-auth'
+import { getApiErrorMessage } from '@/lib/api-error'
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -24,13 +28,22 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>
 
 export default function SignupPage() {
+  const { signup, isSignupPending } = useAuth()
+  const navigate = useNavigate()
+
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: '', email: '', password: '' },
   })
 
-  function onSubmit(_values: SignupFormValues) {
-    // Wiring only — account creation is implemented once the backend exists.
+  async function onSubmit(values: SignupFormValues) {
+    try {
+      const user = await signup(values)
+      toast.success(`Welcome to LeafMind, ${user.name}.`)
+      navigate(ROUTES.dashboard, { replace: true })
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to create your account.'))
+    }
   }
 
   return (
@@ -47,7 +60,11 @@ export default function SignupPage() {
               <FormItem>
                 <FormLabel>Full name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Jane Doe" {...field} />
+                  <Input
+                    placeholder="Jane Doe"
+                    autoComplete="name"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -63,6 +80,7 @@ export default function SignupPage() {
                   <Input
                     type="email"
                     placeholder="you@example.com"
+                    autoComplete="email"
                     {...field}
                   />
                 </FormControl>
@@ -77,14 +95,26 @@ export default function SignupPage() {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="••••••••" {...field} />
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full">
-            Create account
+          <Button type="submit" className="w-full" disabled={isSignupPending}>
+            {isSignupPending ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              'Create account'
+            )}
           </Button>
         </form>
       </Form>

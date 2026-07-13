@@ -1,10 +1,14 @@
 # LeafMind — Frontend
 
 The frontend foundation for **LeafMind v3.0**, a research-grade AI web
-application for medicinal plant identification and reasoning. This
-sprint delivers the application shell only — routing, layout, theming,
-and reusable UI primitives. AI features, authentication logic, and RAG
-integration land in later sprints.
+application for medicinal plant identification and reasoning.
+
+- **Sprint 1** delivered the application shell — routing, layout,
+  theming, and reusable UI primitives.
+- **Sprint 2** delivered a complete authentication system — login,
+  signup, password reset, session handling, JWT persistence, and
+  role-based access control — wired against placeholder FastAPI
+  endpoints. AI features and RAG integration land in later sprints.
 
 ## Tech Stack
 
@@ -88,12 +92,30 @@ src/
   green, sage green, warm beige, white, dark slate).
 - **Routing**: Defined in `src/routes/router.tsx`. Route path strings
   live in `src/routes/paths.ts` as a single source of truth.
-- **Protected routes**: `src/routes/ProtectedRoute.tsx` gates routes on
-  client-side auth state only. It does not verify tokens or call the
-  backend — that logic is added once the FastAPI auth API exists.
-- **API layer**: `src/lib/api-client.ts` configures a shared Axios
-  instance. `src/services/*.service.ts` files define typed request
-  functions per resource; none are wired to real UI flows yet.
+- **Authentication**: `src/providers/AuthProvider.tsx` owns auth state.
+  It rehydrates the session from a stored JWT on load (calling
+  `/auth/me`), and exposes `login`, `signup`, and `logout` as React
+  Query mutations via `useAuth()`. Access/refresh tokens persist in
+  `localStorage` through `src/lib/token-storage.ts`, which is why
+  login survives a page refresh.
+- **Route guards**: `src/routes/ProtectedRoute.tsx` gates nested routes
+  on authentication, redirecting to `/login` and preserving the
+  attempted location so the user returns there after signing in.
+  `src/routes/RoleGuard.tsx` nests inside it to further restrict routes
+  by role (`user` / `developer` / `admin`), redirecting to
+  `/unauthorized` otherwise. Sidebar navigation
+  (`src/config/navigation.ts`) is filtered by the same roles so links
+  a user can't access aren't shown.
+- **Axios interceptors**: `src/lib/api-client.ts` attaches the access
+  token to every request. On a 401, it attempts a single silent
+  refresh via `/auth/refresh` and retries the original request; if the
+  refresh fails, tokens are cleared and the app redirects to
+  `/session-expired`. `src/lib/auth-events.ts` bridges that redirect
+  from the interceptor (outside React) back into `AuthProvider`.
+- **API layer**: `src/services/*.service.ts` files define typed
+  request functions per resource against the FastAPI routes from
+  Sprint 1's contract. The backend itself doesn't exist yet, so these
+  calls will fail until it's implemented — this is expected.
 - **UI components**: `src/components/ui` is managed by the shadcn CLI
   (`npx shadcn@latest add <component>`). Prefer adding new primitives
   through the CLI rather than hand-writing them.

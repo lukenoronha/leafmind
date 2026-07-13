@@ -12,9 +12,17 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { Logo } from '@/components/common/Logo'
-import { primaryNavItems, secondaryNavItems } from '@/config/navigation'
+import {
+  filterNavItemsByRole,
+  primaryNavItems,
+  secondaryNavItems,
+} from '@/config/navigation'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AppSidebar() {
+  const { user } = useAuth()
+  const visiblePrimaryItems = filterNavItemsByRole(primaryNavItems, user?.role)
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -32,7 +40,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {primaryNavItems.map((item) => (
+              {visiblePrimaryItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
                   <SidebarMenuButton asChild tooltip={item.label}>
                     <NavLink
