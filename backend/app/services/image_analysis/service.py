@@ -7,6 +7,7 @@ each stage, DB persistence, error translation to `LeafMindError` subclasses)
 live here — routers stay a thin HTTP shim.
 """
 
+import asyncio
 import time
 import uuid
 
@@ -121,8 +122,14 @@ class ImageAnalysisService:
         candidate_labels = self._get_candidate_labels()
 
         try:
-            classification = inference_pipeline.classify(
-                preprocessing_result.pil_image, candidate_labels=candidate_labels, top_k=top_k
+            # classify() blocks on CPU-bound model loading/generation; running
+            # it in a worker thread keeps the event loop free to serve other
+            # requests (e.g. login) while this one is in progress.
+            classification = await asyncio.to_thread(
+                inference_pipeline.classify,
+                preprocessing_result.pil_image,
+                candidate_labels=candidate_labels,
+                top_k=top_k,
             )
         except InferenceError as exc:
             logger.error("Inference failed for image_id={}: {}", image_id, exc)

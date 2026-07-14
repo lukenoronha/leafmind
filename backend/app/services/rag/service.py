@@ -9,6 +9,7 @@ lifecycle (`upload_document`, `reindex`, `delete_document`, `list_documents`)
 since both concerns share the same embedding/vector-store collaborators.
 """
 
+import asyncio
 import uuid
 
 from loguru import logger
@@ -151,8 +152,13 @@ class RAGService:
         )
 
         try:
-            turn = inference_pipeline.generate_from_messages(
-                rag_messages, max_new_tokens=self._settings.RAG_MAX_NEW_TOKENS
+            # generate_from_messages() blocks on CPU-bound model loading/
+            # generation; running it in a worker thread keeps the event loop
+            # free to serve other requests (e.g. login) while this one runs.
+            turn = await asyncio.to_thread(
+                inference_pipeline.generate_from_messages,
+                rag_messages,
+                max_new_tokens=self._settings.RAG_MAX_NEW_TOKENS,
             )
         except InferenceError as exc:
             logger.error("RAG inference failed for user={}: {}", user.email, exc)

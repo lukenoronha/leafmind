@@ -11,6 +11,7 @@ aggregation formulas), so it reflects real production traffic rather than a
 synthetic benchmark.
 """
 
+import asyncio
 import time
 import uuid
 from datetime import datetime
@@ -105,8 +106,15 @@ class EvaluationService:
             for image_path in image_paths:
                 try:
                     pil_image = Image.open(image_path).convert("RGB")
-                    result = inference_pipeline.classify(
-                        pil_image, candidate_labels=class_names, top_k=1
+                    # classify() blocks on CPU-bound model loading/generation;
+                    # running it in a worker thread keeps the event loop free
+                    # to serve other requests during a (potentially long)
+                    # multi-image evaluation run.
+                    result = await asyncio.to_thread(
+                        inference_pipeline.classify,
+                        pil_image,
+                        candidate_labels=class_names,
+                        top_k=1,
                     )
                 except (InferenceError, OSError) as exc:
                     errors_count += 1
