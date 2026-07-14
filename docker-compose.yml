@@ -70,6 +70,18 @@ services:
     depends_on:
       - nginx
 
+  deploy-webhook:
+    build: ./deploy-webhook
+    environment:
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      REPO_DIR: ${REPO_DIR:-/repo}
+      DEPLOY_BRANCH: main
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${REPO_DIR:-.}:${REPO_DIR:-/repo}
+    ports:
+      - "9000:9000"
+
 volumes:
   postgres_data:
   backend_uploads:
