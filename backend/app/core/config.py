@@ -31,7 +31,12 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # --- CORS ---
-    CORS_ORIGINS: Annotated[list[str], NoDecode] = ["http://localhost:3000", "http://localhost:8080"]
+    # :5173 is the Vite dev server's actual default port (see frontend/vite.config.ts).
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://localhost:5173",
+    ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
