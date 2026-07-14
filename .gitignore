@@ -51,6 +51,9 @@ pnpm-debug.log*
 .env.production
 .env.*.local
 
+# Machine-specific Docker Compose overrides (e.g. GPU device reservations)
+docker-compose.override.yml
+
 # ============================================================
 # IDE / Editor
 # ============================================================
