@@ -14,7 +14,17 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.api.deps import get_developer_service, get_image_analysis_service, get_rag_service
+from app.api.deps import (
+    get_admin_embedding_service,
+    get_admin_knowledge_base_service,
+    get_admin_monitoring_service,
+    get_dataset_management_service,
+    get_developer_service,
+    get_evaluation_service,
+    get_image_analysis_service,
+    get_rag_service,
+    get_report_service,
+)
 from app.db.base import Base
 from app.db.session import get_db_session
 from app.inference.vlm.pipeline import VLMInferencePipeline
@@ -22,9 +32,12 @@ from app.main import app
 from app.models.role import Role, RoleName
 from app.models.user import User
 from app.rag.retriever import Retriever
+from app.services.admin import AdminEmbeddingService, AdminKnowledgeBaseService, AdminMonitoringService, DatasetManagementService
 from app.services.developer import DeveloperService
+from app.services.evaluation import EvaluationService
 from app.services.image_analysis import ImageAnalysisService
 from app.services.rag import RAGService
+from app.services.reports import ReportService
 from tests.fakes import FakeEmbeddingBackend, FakeVectorStore, FakeVLMBackend
 
 _TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -126,10 +139,100 @@ async def client(
             settings = Settings(LOG_DIR=str(tmp_path / "logs"))
             yield DeveloperService(session, settings=settings, vector_store=fake_vector_store)
 
+    async def _override_get_evaluation_service():
+        async with db_session_factory() as session:
+            from app.core.config import Settings
+            from app.datasets.loader import DatasetLoader
+
+            settings = Settings(DATASET_ROOT=str(tmp_path / "eval_dataset"))
+            yield EvaluationService(
+                session,
+                settings=settings,
+                dataset_loader=DatasetLoader(settings),
+                inference=VLMInferencePipeline(backend=fake_vlm_backend),
+            )
+
+    async def _override_get_report_service():
+        async with db_session_factory() as session:
+            from app.core.config import Settings
+
+            settings = Settings(UPLOAD_DIR=str(tmp_path / "uploads"))
+            yield ReportService(
+                session,
+                settings=settings,
+                retriever=Retriever(
+                    embedding_backend=fake_embedding_backend,
+                    vector_store=fake_vector_store,
+                    settings=settings,
+                ),
+            )
+
+    async def _override_get_admin_knowledge_base_service():
+        async with db_session_factory() as session:
+            from app.core.config import Settings
+            from app.documents.storage import DocumentStorage
+            from app.images.storage import ImageStorage
+            from app.rag.pipeline import RAGIngestionPipeline
+
+            settings = Settings(
+                UPLOAD_DIR=str(tmp_path / "uploads"),
+                DOCUMENT_UPLOAD_DIR=str(tmp_path / "documents"),
+            )
+            rag_service = RAGService(
+                session,
+                settings=settings,
+                image_storage=ImageStorage(settings),
+                document_storage=DocumentStorage(settings),
+                inference=VLMInferencePipeline(backend=fake_vlm_backend),
+                retriever=Retriever(
+                    embedding_backend=fake_embedding_backend,
+                    vector_store=fake_vector_store,
+                    settings=settings,
+                ),
+                ingestion_pipeline=RAGIngestionPipeline(
+                    embedding_backend=fake_embedding_backend,
+                    vector_store=fake_vector_store,
+                    settings=settings,
+                ),
+                vector_store=fake_vector_store,
+            )
+            yield AdminKnowledgeBaseService(session, rag_service=rag_service)
+
+    async def _override_get_admin_embedding_service():
+        async with db_session_factory() as session:
+            from app.core.config import Settings
+
+            settings = Settings(UPLOAD_DIR=str(tmp_path / "uploads"))
+            rag_service = RAGService(session, settings=settings, vector_store=fake_vector_store)
+            yield AdminEmbeddingService(
+                session, vector_store=fake_vector_store, rag_service=rag_service
+            )
+
+    async def _override_get_admin_monitoring_service():
+        yield AdminMonitoringService(vector_store=fake_vector_store)
+
+    async def _override_get_dataset_management_service():
+        async with db_session_factory() as session:
+            from app.core.config import Settings
+            from app.datasets.loader import DatasetLoader
+
+            settings = Settings(DATASET_ROOT=str(tmp_path / "admin_dataset"))
+            yield DatasetManagementService(session, settings=settings, loader=DatasetLoader(settings))
+
     app.dependency_overrides[get_db_session] = _override_get_db_session
     app.dependency_overrides[get_image_analysis_service] = _override_get_image_analysis_service
     app.dependency_overrides[get_rag_service] = _override_get_rag_service
     app.dependency_overrides[get_developer_service] = _override_get_developer_service
+    app.dependency_overrides[get_evaluation_service] = _override_get_evaluation_service
+    app.dependency_overrides[get_report_service] = _override_get_report_service
+    app.dependency_overrides[get_admin_knowledge_base_service] = (
+        _override_get_admin_knowledge_base_service
+    )
+    app.dependency_overrides[get_admin_embedding_service] = _override_get_admin_embedding_service
+    app.dependency_overrides[get_admin_monitoring_service] = _override_get_admin_monitoring_service
+    app.dependency_overrides[get_dataset_management_service] = (
+        _override_get_dataset_management_service
+    )
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
@@ -146,6 +249,32 @@ async def auth_headers(client: AsyncClient) -> dict[str, str]:
         "/api/v1/auth/register",
         json={"email": email, "password": VALID_PASSWORD, "full_name": "Leaf Tester"},
     )
+    login_response = await client.post(
+        "/api/v1/auth/login", json={"email": email, "password": VALID_PASSWORD}
+    )
+    access_token = login_response.json()["access_token"]
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest_asyncio.fixture
+async def admin_headers(client: AsyncClient, db_session_factory) -> dict[str, str]:
+    """Registers a fresh user, promotes them to the `admin` role directly in
+    the DB (mirrors `developer_headers`), then logs in.
+    """
+    email = "admin_tester@example.com"
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": VALID_PASSWORD, "full_name": "Admin Tester"},
+    )
+
+    async with db_session_factory() as session:
+        admin_role = (
+            await session.execute(select(Role).where(Role.name == RoleName.ADMIN.value))
+        ).scalar_one()
+        user = (await session.execute(select(User).where(User.email == email))).scalar_one()
+        user.role_id = admin_role.id
+        await session.commit()
+
     login_response = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": VALID_PASSWORD}
     )

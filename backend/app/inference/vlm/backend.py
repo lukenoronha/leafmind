@@ -60,6 +60,15 @@ class HFQwenVLBackend:
     def model_name(self) -> str:
         return self._settings.VLM_MODEL_NAME
 
+    def warm_up(self) -> None:
+        """Eagerly load the model now rather than on first `generate()` call.
+
+        Used by `app.main`'s startup path when `Settings.VLM_LOAD_ON_STARTUP`
+        is enabled, so the first real request doesn't pay the multi-second
+        cold-load cost. Idempotent and safe to call even if already loaded.
+        """
+        self._ensure_loaded()
+
     def _ensure_loaded(self) -> None:
         if self._model is not None:
             return

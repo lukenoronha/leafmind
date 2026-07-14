@@ -41,3 +41,10 @@ sentence-transformers
 
 # --- Developer API / Observability (Sprint 5) ---
 psutil
+
+# --- Evaluation, Reporting, Performance (Sprint 7) ---
+# scikit-learn: classification metrics (accuracy/precision/recall/F1/confusion
+# matrix) in app/services/evaluation/service.py. reportlab: PDF report
+# generation in app/services/reports/pdf_builder.py.
+scikit-learn
+reportlab

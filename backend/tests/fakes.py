@@ -24,10 +24,13 @@ class FakeVLMBackend:
         response_text: str | None = None,
         raise_error: Exception | None = None,
         model_name: str = "fake-qwen2.5-vl",
+        label_sequence: list[str] | None = None,
     ):
         self._response_text = response_text
         self._raise_error = raise_error
         self._model_name = model_name
+        self._label_sequence = label_sequence
+        self._classification_call_count = 0
         self.calls: list[list[dict]] = []
 
     @property
@@ -40,30 +43,41 @@ class FakeVLMBackend:
         if self._raise_error is not None:
             raise self._raise_error
 
+        is_classification_call = any(
+            isinstance(m.get("content"), list)
+            and any(
+                isinstance(part, dict)
+                and "top" in part.get("text", "").lower()
+                and "candidates" in part.get("text", "").lower()
+                for part in m["content"]
+            )
+            for m in messages
+        )
+
         if self._response_text is not None:
             text = self._response_text
-        else:
-            # Infer whether this is a classification or chat call from the
-            # presence of a "candidates" instruction in the prompt text.
-            is_classification = any(
-                isinstance(m.get("content"), list)
-                and any(
-                    isinstance(part, dict) and "top" in part.get("text", "").lower() and "candidates" in part.get("text", "").lower()
-                    for part in m["content"]
-                )
-                for m in messages
+        elif is_classification_call and self._label_sequence is not None:
+            # Scripted mode for evaluation tests: returns the Nth label in
+            # `label_sequence` (wrapping if there are more calls than labels),
+            # so a test can assert exact accuracy/precision/recall/F1 against
+            # a fully deterministic, known-correct/known-wrong prediction
+            # sequence instead of the fixed hardcoded response below.
+            label = self._label_sequence[
+                self._classification_call_count % len(self._label_sequence)
+            ]
+            self._classification_call_count += 1
+            text = json.dumps({"candidates": [{"label": label, "confidence": 0.9, "reasoning": "scripted"}]})
+        elif is_classification_call:
+            text = json.dumps(
+                {
+                    "candidates": [
+                        {"label": "Pongamia_pinnata", "confidence": 0.87, "reasoning": "compound leaflets, oval shape"},
+                        {"label": "Santalum_album", "confidence": 0.09, "reasoning": "less likely, different venation"},
+                    ]
+                }
             )
-            if is_classification:
-                text = json.dumps(
-                    {
-                        "candidates": [
-                            {"label": "Pongamia_pinnata", "confidence": 0.87, "reasoning": "compound leaflets, oval shape"},
-                            {"label": "Santalum_album", "confidence": 0.09, "reasoning": "less likely, different venation"},
-                        ]
-                    }
-                )
-            else:
-                text = "This appears to be a healthy medicinal plant leaf."
+        else:
+            text = "This appears to be a healthy medicinal plant leaf."
 
         prompt_tokens = sum(len(str(m.get("content", ""))) for m in messages) // 4
         completion_tokens = len(text) // 4

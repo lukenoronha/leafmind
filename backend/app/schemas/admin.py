@@ -175,6 +175,8 @@ class AdminSystemStatusResponse(BaseModel):
     disk_total_gb: float
     disk_used_gb: float
     disk_percent: float
+    avg_request_latency_ms: float
+    p95_request_latency_ms: float
 
 
 # --- Activity log ---

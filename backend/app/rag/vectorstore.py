@@ -75,6 +75,14 @@ class ChromaVectorStore:
         self._collection = None
         self._lock = threading.Lock()
 
+    def warm_up(self) -> None:
+        """Eagerly open the Chroma client/collection now rather than on first use.
+
+        Used by `app.main`'s startup path when
+        `Settings.CHROMADB_LOAD_ON_STARTUP` is enabled. Idempotent.
+        """
+        self._ensure_loaded()
+
     def _ensure_loaded(self) -> None:
         if self._collection is not None:
             return

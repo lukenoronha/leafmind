@@ -12,6 +12,7 @@ developer layers independently gated without a cross-dependency.
 
 from app.core.uptime import get_uptime_seconds
 from app.db.session import check_database_connection
+from app.middleware.timing import get_recent_latency_stats
 from app.rag.vectorstore import VectorStore, get_vector_store
 from app.services.developer import system_metrics
 
@@ -37,6 +38,7 @@ class AdminMonitoringService:
 
         models = system_metrics.get_model_availability()
         resources = system_metrics.get_resource_usage()
+        latency = get_recent_latency_stats()
 
         return {
             "backend_healthy": True,
@@ -53,4 +55,6 @@ class AdminMonitoringService:
             "disk_total_gb": resources.disk_total_gb,
             "disk_used_gb": resources.disk_used_gb,
             "disk_percent": resources.disk_percent,
+            "avg_request_latency_ms": latency["avg_request_latency_ms"],
+            "p95_request_latency_ms": latency["p95_request_latency_ms"],
         }

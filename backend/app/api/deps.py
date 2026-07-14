@@ -18,11 +18,22 @@ from app.core.security import TokenError, TokenType, decode_token
 from app.db.session import get_db_session
 from app.models.role import RoleName
 from app.models.user import User
+from app.services.admin import (
+    AdminActivityLogService,
+    AdminEmbeddingService,
+    AdminKnowledgeBaseService,
+    AdminMonitoringService,
+    AdminSettingsService,
+    AdminUserService,
+    DatasetManagementService,
+)
 from app.services.auth import AuthService
 from app.services.auth.service import AuthError, InactiveUserError, InvalidTokenError
 from app.services.developer import DeveloperService
+from app.services.evaluation import EvaluationService
 from app.services.image_analysis import ImageAnalysisService
 from app.services.rag import RAGService
+from app.services.reports import ReportService
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DbSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
@@ -115,3 +126,90 @@ async def get_developer_service(db: DbSessionDep) -> AsyncIterator[DeveloperServ
 
 
 DeveloperServiceDep = Annotated[DeveloperService, Depends(get_developer_service)]
+
+
+# --- Admin API (Sprint 6: user/dataset/knowledge-base/embedding/settings management,
+# system monitoring, activity log — wired up in Sprint 7) ---
+
+
+async def get_admin_user_service(db: DbSessionDep) -> AsyncIterator[AdminUserService]:
+    yield AdminUserService(db)
+
+
+AdminUserServiceDep = Annotated[AdminUserService, Depends(get_admin_user_service)]
+
+
+async def get_dataset_management_service(
+    db: DbSessionDep,
+) -> AsyncIterator[DatasetManagementService]:
+    yield DatasetManagementService(db)
+
+
+DatasetManagementServiceDep = Annotated[
+    DatasetManagementService, Depends(get_dataset_management_service)
+]
+
+
+async def get_admin_knowledge_base_service(
+    db: DbSessionDep,
+) -> AsyncIterator[AdminKnowledgeBaseService]:
+    yield AdminKnowledgeBaseService(db)
+
+
+AdminKnowledgeBaseServiceDep = Annotated[
+    AdminKnowledgeBaseService, Depends(get_admin_knowledge_base_service)
+]
+
+
+async def get_admin_embedding_service(db: DbSessionDep) -> AsyncIterator[AdminEmbeddingService]:
+    yield AdminEmbeddingService(db)
+
+
+AdminEmbeddingServiceDep = Annotated[AdminEmbeddingService, Depends(get_admin_embedding_service)]
+
+
+async def get_admin_settings_service(db: DbSessionDep) -> AsyncIterator[AdminSettingsService]:
+    yield AdminSettingsService(db)
+
+
+AdminSettingsServiceDep = Annotated[AdminSettingsService, Depends(get_admin_settings_service)]
+
+
+async def get_admin_monitoring_service() -> AsyncIterator[AdminMonitoringService]:
+    yield AdminMonitoringService()
+
+
+AdminMonitoringServiceDep = Annotated[
+    AdminMonitoringService, Depends(get_admin_monitoring_service)
+]
+
+
+async def get_admin_activity_log_service(
+    db: DbSessionDep,
+) -> AsyncIterator[AdminActivityLogService]:
+    yield AdminActivityLogService(db)
+
+
+AdminActivityLogServiceDep = Annotated[
+    AdminActivityLogService, Depends(get_admin_activity_log_service)
+]
+
+
+# --- Evaluation API (Sprint 7: classification + RAG metrics) ---
+
+
+async def get_evaluation_service(db: DbSessionDep) -> AsyncIterator[EvaluationService]:
+    yield EvaluationService(db)
+
+
+EvaluationServiceDep = Annotated[EvaluationService, Depends(get_evaluation_service)]
+
+
+# --- Reports API (Sprint 7: PDF/JSON prediction + evaluation reports) ---
+
+
+async def get_report_service(db: DbSessionDep) -> AsyncIterator[ReportService]:
+    yield ReportService(db)
+
+
+ReportServiceDep = Annotated[ReportService, Depends(get_report_service)]

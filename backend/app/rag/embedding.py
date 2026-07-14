@@ -59,6 +59,14 @@ class SentenceTransformerBackend:
         assert self._dimension is not None
         return self._dimension
 
+    def warm_up(self) -> None:
+        """Eagerly load the model now rather than on first `embed()` call.
+
+        Used by `app.main`'s startup path when
+        `Settings.RAG_EMBEDDING_LOAD_ON_STARTUP` is enabled. Idempotent.
+        """
+        self._ensure_loaded()
+
     def _ensure_loaded(self) -> None:
         if self._model is not None:
             return

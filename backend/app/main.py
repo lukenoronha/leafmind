@@ -38,9 +38,44 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         logger.warning("Database connectivity check failed — continuing startup in degraded mode")
 
+    _warm_up_lazy_singletons()
+
     yield
 
     logger.info("Shutting down {}", settings.APP_NAME)
+
+
+def _warm_up_lazy_singletons() -> None:
+    """Opt-in eager load of the three heavy lazy singletons (VLM, embedding,
+    ChromaDB), each gated by its own `Settings.*_LOAD_ON_STARTUP` flag
+    (Sprint 7). All default to `False` — fully lazy, unchanged startup
+    behavior unless explicitly opted into via `.env`. Failures are logged,
+    not fatal: a warm-up failure (e.g. missing GPU/weights in this
+    environment) should degrade to lazy-on-first-request, not crash startup.
+    """
+    if settings.VLM_LOAD_ON_STARTUP:
+        try:
+            from app.inference.vlm.backend import get_vlm_backend
+
+            get_vlm_backend().warm_up()
+        except Exception:
+            logger.exception("VLM warm-up failed — will retry lazily on first request")
+
+    if settings.RAG_EMBEDDING_LOAD_ON_STARTUP:
+        try:
+            from app.rag.embedding import get_embedding_backend
+
+            get_embedding_backend().warm_up()
+        except Exception:
+            logger.exception("Embedding model warm-up failed — will retry lazily on first request")
+
+    if settings.CHROMADB_LOAD_ON_STARTUP:
+        try:
+            from app.rag.vectorstore import get_vector_store
+
+            get_vector_store().warm_up()
+        except Exception:
+            logger.exception("ChromaDB warm-up failed — will retry lazily on first request")
 
 
 def create_application() -> FastAPI:
