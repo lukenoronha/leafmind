@@ -14,6 +14,7 @@ import time
 
 from loguru import logger
 
+from app.inference.clip.classifier import CLIPClassifierUnavailableError, get_trained_clip_classifier
 from app.inference.vlm.backend import VLMBackend, VLMBackendError, get_vlm_backend
 from app.inference.vlm.prompts import build_chat_messages, build_classification_messages
 from app.inference.vlm.schemas import ChatTurn, ClassificationCandidate, ClassificationResult
@@ -56,11 +57,21 @@ class VLMInferencePipeline:
             logger.warning("CLIP few-shot retrieval unavailable, falling back to zero-shot: {}", exc)
             few_shot_examples = []
 
+        trained_classifier_hint: tuple[str, float] | None = None
+        try:
+            label, confidence = get_trained_clip_classifier().predict(pil_image)
+            trained_classifier_hint = (label, confidence)
+        except CLIPClassifierUnavailableError:
+            pass  # not trained yet — safe to omit the hint entirely
+        except Exception as exc:
+            logger.warning("Trained CLIP classifier unavailable, omitting hint: {}", exc)
+
         messages = build_classification_messages(
             pil_image=pil_image,
             candidate_labels=candidate_labels,
             top_k=top_k,
             few_shot_examples=few_shot_examples,
+            trained_classifier_hint=trained_classifier_hint,
         )
 
         start = time.perf_counter()

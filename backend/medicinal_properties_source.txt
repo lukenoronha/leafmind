@@ -1,0 +1,190 @@
+Medicinal Properties of Leaf Species
+Source: Dr. Shivarama Karantha Pilikula Nisargadhama, Mangaluru, Karnataka
+https://pilikula.karnataka.gov.in
+
+This document covers 7 of the 32 species in the LeafMind dataset for which
+verified medicinal-property reference data was available from the source
+above. The remaining 25 species are not covered by this source and are not
+included here.
+
+================================================================================
+
+## Mesua_ferrea
+
+Scientific Name: Mesua ferrea L.
+Family: Clusiaceae
+Common Names: Nagasampige, Nagakesara (Kannada); Nanga, Peri (Malayalam);
+Bhujangakhya, Kanchana, Kesara (Sanskrit); Indian Rose Chestnut (English)
+
+Description: Evergreen trees reaching 30 m tall with smooth, ash-colored bark.
+Leaves opposite, variable shape (linear-lanceolate to elliptic-oblong), 6-15 cm
+long, displaying color changes from crimson red to pink to dark green. Flowers
+axillary/terminal, solitary, white, bisexual, sweet-scented, yellow stamens.
+Fruits ovoid to globose, 2.5-3.5 cm, containing 1-4 seeds.
+
+Medicinal Properties and Traditional Uses:
+Bark tonic after child birth, used in anaemia; bark and flower bechic; bark and
+unripe fruit sudorific; bark, unripe fruit and flower astringent. Leaf and
+flower antidote for snakebite and scorpion sting. Flower-bud used in
+dysentery; flower stomachic, expectorant, used in piles, burning of feet. Seed
+oil used in skin diseases and rheumatism. In Ayurveda, anthers used in
+diseases of head, throat, urinary bladder disorders, poisoning, nausea,
+vomiting, leprosy, erysipelas, thirst and piles.
+
+Other Uses: Seed oil for soap production; wood used for railway sleepers,
+bridges, and construction; volatile oil used in perfuming soaps.
+
+================================================================================
+
+## Pongamia_pinnata
+
+Scientific Name: Pongamia pinnata (L.) Pierre
+Family: Fabaceae
+Common Names: Honge mara, Karanja (Kannada); Pugu, Punnu, Pungam (Malayalam);
+Kanuga (Tamil); Ponga (Telugu)
+
+Description: Nearly evergreen trees reaching 15 m tall with greyish-green
+bark. Leaves compound with 5-9 opposite leaflets, 10-20 cm long overall.
+Flowers in 15 cm axillary racemes with pinkish-white petals. Fruits
+indehiscent pods approximately 6 x 3.5 cm with a single reniform seed.
+Flowering: March-June. Fruiting: June-December.
+
+Medicinal Properties and Traditional Uses:
+Twigs used for cleaning teeth; juice of roots used for cleaning teeth. Seed
+oil (Pongam oil) applied externally to scabies, herpes, sores, leucoderma.
+Seeds valued as febrifuge and tonic, used in bronchitis and whooping-cough.
+In Ayurveda, bark, leaf and seed used in oedema, poisoning, piles, worm
+infection, leprosy. Specialized formulations "Prithvisara Taila" and
+"Tiktadya Ghrita" used for skin diseases and ulcers.
+
+================================================================================
+
+## Santalum_album
+
+Scientific Name: Santalum album L.
+Family: Santalaceae
+Common Names: Srigandha (Kannada); Chandanam (Malayalam); Chandana,
+Taliaparnam (Sanskrit); Sandanam (Tamil); Chandanamu (Telugu); Sandalwood
+tree (English)
+
+Description: Small evergreen trees reaching 10 m tall with slender drooping
+branches and grey bark. Facultative root parasites when young. Opposite or
+whorled leaves (4-8 x 1.5-4 cm), brownish-purple flowers in terminal and
+axillary panicles. Purple-black drupes (1-1.5 cm) with solitary seeds.
+Flowering & Fruiting: March-August. Distribution: Western Peninsula, India.
+
+Medicinal Properties and Traditional Uses:
+Wood febrifuge, diaphoretic, anti-inflammatory, used in headache. Wood oil
+stimulant, antigonorrhoeic, expectorant, used as urinary antiseptic in
+dysuria, used in bronchitis, gleet, tuberculosis of gall bladder. Also used
+for skin diseases, worm infestation, fever, and polyuria. Heartwood produces
+a valuable essential oil via distillation, used in incense making and
+religious ceremonies. Stem-bark addresses malaria; paste formulations
+address multiple conditions including debility and emaciation.
+
+================================================================================
+
+## Saraca_indica (recorded on source as Saraca asoca)
+
+Scientific Name: Saraca asoca (Roxb.) Wilde
+Family: Caesalpiniaceae
+Common Names: Ashokada mara (Kannada); Asoka, Asokam, Hema pushpam
+(Malayalam); Asogam, Asoka (Tamil & Telugu)
+
+Description: Small trees reaching 10-12 m tall with even-pinnate leaves.
+Leaflets 3-6 pairs, 13-23 x 5-8 cm. Showy axillary flowers in yellow, orange,
+or red, in dense corymbose panicles. Dehiscing flat pods (5-15 x 2.5 cm) with
+obovate-orbicular seeds. Flowering: December-January. Fruiting: May-July.
+
+Medicinal Properties and Traditional Uses:
+Bark astringent, antibilious, uterine sedative — used for leucorrhoea,
+menorrhagia and other menstrual disorders. Also used for hemorrhoids,
+dyspepsia, and skin conditions. Bark and flower antibilious, used for
+haemorrhagic dysentery. Flower functions as a uterine tonic, antidiabetic,
+antisyphilitic agent. In Ayurvedic medicine, bark addresses worm infestation,
+polyuria, fever, leprosy and gynaecological disorders. The preparation
+"Ashokarishta" is prescribed in leucorrhoea, haematuria, menorrhagia and
+other diseases of the genito-urinary system of females.
+
+================================================================================
+
+## Syzygium_zeylanicum
+
+Scientific Name: Syzygium zeylanicum (L.) DC.
+Family: Myrtaceae
+Common Names: Kunnerale, Bilinerale (Kannada); Pula (Malayalam)
+
+Description: A tree with pale brown bark and opposite, ovate to
+elliptic-lanceolate leaves (7-9 x 2.5-3.2 cm). Small white flowers in axillary
+and terminal paniculate cymes. Fruit a globose white berry approximately 8 mm
+across, containing a solitary seed. Flowering/Fruiting: February-May.
+Distribution: Western Peninsular India, Orissa, Silhet; upper Western Ghats
+forest undergrowth (600-900 m elevation); also Sri Lanka, Sumatra, Borneo,
+Malaya.
+
+Medicinal Properties and Traditional Uses:
+Plant stimulant, used in rheumatism, syphilis, uterine problems; decoction of
+leaf and root used as vermifuge.
+
+Other Uses: Edible fruits; timber for construction and agricultural
+implements; bark yields a black dye.
+
+================================================================================
+
+## Terminalia_arjuna
+
+Scientific Name: Terminalia arjuna (Roxb. ex DC.) Wight & Arn.
+Family: Combretaceae
+Common Names: Bili mathi (Kannada); Vella marutu (Malayalam); Arjuna,
+Dhananjaya (Sanskrit); Vellamarda, Kula maruthu (Tamil); Tittu maddi (Telugu)
+
+Description: Large deciduous trees reaching 25 m tall with smooth,
+greenish-white bark that peels in flat pieces. Sub-opposite leaves
+elliptic-lanceolate, up to 15 x 7 cm, slightly serrated edges. Yellowish
+flowers in panicled spikes. Fruits are woody drupes with five hard
+projecting wings. Flowering & Fruiting: March-May. Distribution: throughout
+India, common in deciduous forests of the Western Ghats and coastal regions
+along rivers and streams; also Sri Lanka.
+
+Medicinal Properties and Traditional Uses:
+Bark: styptic, antidysenteric, astringent, antiasthmatic, febrifuge,
+expectorant, antibilious, cardiotonic, aphrodisiac, diuretic. Addresses
+fractures, ulcers, anemia, leucoderma, and excessive perspiration. Leaves
+treat earache; fruits provide deobstruent properties. Bark also used as a
+tanning agent and for feeding tasar silkworms.
+
+================================================================================
+
+## Trewia_nudiflora
+
+Family: Euphorbiaceae
+Common Names: Pambara kumbil (Malayalam); Ana-thuvarai (Tamil)
+
+Description: Trees reaching up to 15 m tall with subopposite, broadly ovate
+leaves (up to 20 cm long), truncate or cordate at base, acuminate at apex,
+petioles up to 7.5 cm long. Flowers appear before leaves; male flowers in
+short racemes, female flowers in many-flowered racemes up to 7.5 cm long.
+Globosely ovoid drupes approximately 1.3 cm in diameter, densely covered
+with fine hairs. Flowering & Fruiting: March-July. Distribution: endemic to
+India's Western Ghats and West Coast in wet places and along streams
+(Maharashtra, Karnataka, Tamil Nadu, Kerala).
+
+Medicinal Properties and Traditional Uses:
+No medicinal or therapeutic uses are documented for this species in the
+source material. The primary documented use is non-medicinal: wood is soft,
+used for making drums and for carving images.
+
+================================================================================
+
+## Species Not Covered by This Source
+
+The following 25 species from the LeafMind dataset do not have a matching
+entry on the Pilikula Nisargadhama plant database and are not included
+above: Cinnamomum_tamala, Myxopyrum_smilacifolium, Plectranthus_vettiveroides,
+Putranjiva_roxburghii, Rauvolfia_tetraphylla, Rivinia_humilis,
+Samadhera_indica, Sansevieria_zeylanica, Sauropus_androgynus,
+Schaueria_flavicoma, Simarouba_glauca, Solanum_diphyllum, Solanum_torvum,
+Solanum_virginianum, Sphagneticola_trilobata, Streblus_asper,
+Syzygium_gardneri, Syzygium_hemisphericum, Syzygium_samarangense,
+Tabernaemontana_alternifolia, Tamarindus_indica, Thespesia_populnea,
+Tithonia_diversifolia, Vetiveria_zizaioides, Woodfordia_fruiticosa.

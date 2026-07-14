@@ -24,7 +24,11 @@ _CHAT_SYSTEM_PROMPT = (
 
 
 def build_classification_prompt(
-    *, candidate_labels: list[str], top_k: int, has_few_shot_examples: bool = False
+    *,
+    candidate_labels: list[str],
+    top_k: int,
+    has_few_shot_examples: bool = False,
+    trained_classifier_hint: tuple[str, float] | None = None,
 ) -> str:
     """User-turn text prompt instructing the model to classify a leaf image.
 
@@ -49,8 +53,18 @@ def build_classification_prompt(
         if has_few_shot_examples
         else ""
     )
+    classifier_hint_block = ""
+    if trained_classifier_hint is not None:
+        hint_label, hint_confidence = trained_classifier_hint
+        classifier_hint_block = (
+            "A separate classifier trained on labeled reference images of these "
+            f"species predicts '{hint_label}' with {hint_confidence:.0%} confidence. "
+            "Treat this as one additional signal, not a guaranteed answer — weigh it "
+            "against the visual evidence yourself.\n\n"
+        )
     return (
         f"{few_shot_preamble}"
+        f"{classifier_hint_block}"
         "Identify the medicinal plant species shown in this leaf image.\n\n"
         f"Known candidate species (prefer one of these if it plausibly matches):\n{labels_block}\n\n"
         f"Return exactly the top {top_k} most likely candidates, ranked most to least likely, "
@@ -68,6 +82,7 @@ def build_classification_messages(
     candidate_labels: list[str],
     top_k: int,
     few_shot_examples: list[tuple[object, str]] | None = None,
+    trained_classifier_hint: tuple[str, float] | None = None,
 ) -> list[dict]:
     """Qwen2.5-VL chat-format messages for a single classification turn.
 
@@ -76,6 +91,11 @@ def build_classification_messages(
     `app.rag.image_retriever.ImageRetriever` — attached ahead of the query
     image so the model has concrete grounded examples instead of relying
     purely on its own pretrained knowledge of the candidate label text.
+
+    `trained_classifier_hint` is an optional (label, confidence) pair from
+    `app.inference.clip.classifier.TrainedCLIPClassifier` — a linear model
+    fit on this dataset's CLIP embeddings, folded in as a text hint rather
+    than overriding the VLM's own reasoning.
     """
     few_shot_examples = few_shot_examples or []
 
@@ -92,6 +112,7 @@ def build_classification_messages(
                 candidate_labels=candidate_labels,
                 top_k=top_k,
                 has_few_shot_examples=bool(few_shot_examples),
+                trained_classifier_hint=trained_classifier_hint,
             ),
         }
     )

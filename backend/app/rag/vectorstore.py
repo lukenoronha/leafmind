@@ -34,12 +34,18 @@ class VectorRecord:
 
 @dataclass
 class VectorMatch:
-    """One similarity-search hit. `distance` is backend-native (e.g. cosine distance)."""
+    """One similarity-search hit. `distance` is backend-native (e.g. cosine distance).
+
+    `vector` is only populated by `get_all()` (a full collection dump for
+    offline training); `query()` leaves it `None` since callers doing
+    similarity search only need the score, not the raw embedding.
+    """
 
     id: str
     text: str
     distance: float
     metadata: dict
+    vector: list[float] | None = None
 
 
 class VectorStore(Protocol):
@@ -48,6 +54,8 @@ class VectorStore(Protocol):
     def upsert(self, records: list[VectorRecord]) -> None: ...
 
     def query(self, vector: list[float], *, top_k: int) -> list[VectorMatch]: ...
+
+    def get_all(self) -> list[VectorMatch]: ...
 
     def delete_by_document(self, document_id: str) -> None: ...
 
@@ -153,6 +161,29 @@ class ChromaVectorStore:
         return [
             VectorMatch(id=id_, text=doc, distance=dist, metadata=meta or {})
             for id_, doc, dist, meta in zip(ids, documents, distances, metadatas, strict=False)
+        ]
+
+    def get_all(self) -> list[VectorMatch]:
+        """Dump every vector in the collection (e.g. for offline classifier training).
+
+        `distance` is meaningless outside a similarity query, so it is set to
+        0.0 for every returned `VectorMatch` — callers that need distances
+        should use `query()` instead.
+        """
+        self._ensure_loaded()
+        try:
+            result = self._collection.get(include=["documents", "embeddings", "metadatas"])
+        except Exception as exc:
+            raise VectorStoreError(f"Failed to read all vectors from ChromaDB: {exc}") from exc
+
+        ids = result.get("ids", [])
+        documents = result.get("documents", [])
+        embeddings = result.get("embeddings", [])
+        metadatas = result.get("metadatas", [])
+
+        return [
+            VectorMatch(id=id_, text=doc, distance=0.0, metadata=meta or {}, vector=list(vec))
+            for id_, doc, vec, meta in zip(ids, documents, embeddings, metadatas, strict=False)
         ]
 
     def delete_by_document(self, document_id: str) -> None:
