@@ -25,6 +25,12 @@ application for medicinal plant identification and reasoning.
   explainability-focused surface (not administrative management)
   covering KPIs, an AI pipeline visualizer, prediction/RAG analytics, a
   Prompt Inspector, filterable logs, and system component status.
+- **Sprint 6** delivered the Admin Console — user management (search,
+  filter, profile view, activate/deactivate, delete), dataset and
+  knowledge base management (upload/replace/delete/re-index), embedding
+  management with rebuild, expanded system monitoring, backend-driven
+  application settings, and paginated/exportable activity logs. Unlike
+  the developer dashboard, this surface performs real mutations.
 
 ## Tech Stack
 
@@ -198,6 +204,35 @@ src/
     KPI cards (`KpiGrid`) and system status poll every 30s via
     `refetchInterval`; the rest load once per mount. All of it is
     read-only against `GET` endpoints — no mutations.
+- **Admin console**: `src/pages/admin/AdminPage.tsx` (role-gated to
+  `admin` only) is the mutation-heavy counterpart to the developer
+  dashboard, against `src/services/admin.service.ts` and per-module
+  hooks (`src/hooks/use-admin-*.ts`). Mutations invalidate the relevant
+  query key on success and surface `toast.success`/`toast.error`
+  feedback, matching the pattern established in `AuthProvider`. Tabs:
+  - **Users** — `UserManagementPanel` (search, role/status filters,
+    table) plus `UserProfileSheet` (detail view) and a `Switch` for
+    activate/deactivate; delete goes through the shared
+    `DeleteConfirmDialog`.
+  - **Datasets** — `DatasetManagementPanel` with `UploadDatasetDialog`
+    and `ReplaceDatasetDialog`, both built on the generic
+    `FileDropzone` (drag-and-drop + upload progress, not tied to
+    images the way `ImageUploader` is).
+  - **Knowledge base** — `KnowledgeBasePanel` lists indexed PDFs with
+    upload, delete, re-index, and preview (opens `previewUrl` in a new
+    tab — no in-app PDF viewer).
+  - **Embeddings** — `EmbeddingManagementPanel` shows vector/collection
+    stats and a confirm-gated rebuild action.
+  - **System** — `AdminSystemStatusGrid`, the same presentational
+    pattern as the developer dashboard's `SystemStatusGrid` but scoped
+    to `/admin/system/status` with a wider component set (adds API
+    uptime, memory, disk).
+  - **Settings** — `AdminSettingsPanel` renders whatever
+    `GET /admin/settings` returns, grouped by `category`; each
+    `SettingField` infers its input (text/number/boolean/select) from
+    the setting's `type` and saves on blur/toggle/select.
+  - **Activity logs** — `ActivityLogsPanel` adds pagination and CSV
+    export on top of the developer dashboard's log-viewing pattern.
 
 ## Adding shadcn/ui Components
 
