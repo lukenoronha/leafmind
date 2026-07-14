@@ -205,10 +205,14 @@ export const analysisService = {
   },
 
   predict: async (payload: PredictPayload): Promise<Prediction> => {
-    const { data } = await apiClient.post<BackendPredictResponse>('/predict', {
-      image_id: payload.imageId,
-      top_k: payload.topK ?? 3,
-    })
+    // VLM inference can take minutes on CPU-only deployments (no GPU) —
+    // far longer than the client's default 20s timeout, which nginx's own
+    // proxy_read_timeout (300s) already accommodates on the server side.
+    const { data } = await apiClient.post<BackendPredictResponse>(
+      '/predict',
+      { image_id: payload.imageId, top_k: payload.topK ?? 3 },
+      { timeout: 280_000 },
+    )
     return toPrediction(data)
   },
 
@@ -240,6 +244,8 @@ export const analysisService = {
    * one request returns the complete answer plus retrieved sources.
    */
   sendChatMessage: async (payload: ChatPayload): Promise<ChatMessage> => {
+    // Same rationale as predict() above — RAG generation runs the same
+    // CPU-bound VLM and can take minutes without a GPU.
     const { data } = await apiClient.post<BackendRagQueryResponse>(
       '/rag/query',
       {
@@ -247,6 +253,7 @@ export const analysisService = {
         image_id: payload.imageId,
         conversation_id: payload.conversationId,
       },
+      { timeout: 280_000 },
     )
     return {
       id: data.message.id,
