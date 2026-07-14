@@ -1,0 +1,43 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+sqlalchemy
+alembic
+asyncpg
+greenlet
+psycopg2-binary
+loguru
+python-dotenv
+python-multipart
+httpx
+
+# --- Authentication (Sprint 2) ---
+pyjwt
+passlib[bcrypt]
+bcrypt
+email-validator
+
+# --- Image Analysis Pipeline (Sprint 3) ---
+Pillow
+numpy
+opencv-python-headless
+
+# --- Qwen2.5-VL inference (Sprint 3) ---
+# Heavy ML dependencies. Installed but lazily imported/loaded — the app boots
+# and every other endpoint works even if these are absent or no GPU exists;
+# only /predict and /chat require them at call time (see app/inference/vlm/backend.py).
+torch
+transformers
+accelerate
+qwen-vl-utils
+
+# --- Retrieval-Augmented Generation (Sprint 4) ---
+# Heavy ML dependency (sentence embeddings) lazily imported, mirroring the
+# Qwen2.5-VL pattern above — see app/rag/embedding.py.
+chromadb
+pymupdf
+sentence-transformers
+
+# --- Developer API / Observability (Sprint 5) ---
+psutil
