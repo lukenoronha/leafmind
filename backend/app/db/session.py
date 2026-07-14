@@ -1,7 +1,7 @@
 """Async SQLAlchemy engine and session factory (connection scaffolding only)."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,

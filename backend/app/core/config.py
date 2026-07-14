@@ -1,11 +1,10 @@
 """Application configuration loaded from environment variables."""
 
 from functools import lru_cache
-from typing import List, Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
-from typing_extensions import Annotated
 
 
 class Settings(BaseSettings):
@@ -32,11 +31,11 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     # --- CORS ---
-    CORS_ORIGINS: Annotated[List[str], NoDecode] = ["http://localhost:3000", "http://localhost:8080"]
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = ["http://localhost:3000", "http://localhost:8080"]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def split_cors_origins(cls, value: str | List[str]) -> List[str]:
+    def split_cors_origins(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
@@ -75,9 +74,43 @@ class Settings(BaseSettings):
     # --- Default RBAC role assigned to new self-registrations ---
     DEFAULT_USER_ROLE: str = "user"
 
-    # --- ChromaDB / RAG placeholders (future sprint) ---
+    # --- ChromaDB / RAG (Sprint 4: Retrieval-Augmented Generation) ---
     CHROMADB_HOST: str = "localhost"
     CHROMADB_PORT: int = 8001
+    # Local, on-disk persistent client is the default so the whole pipeline is
+    # runnable without a separate ChromaDB server; CHROMADB_HOST/PORT are kept
+    # above for an optional future switch to a client/server deployment.
+    CHROMADB_PERSIST_DIR: str = "chroma_data"
+    CHROMADB_COLLECTION_NAME: str = "leafmind_documents"
+
+    # Document ingestion storage (mirrors UPLOAD_DIR for images)
+    DOCUMENT_UPLOAD_DIR: str = "documents"
+    MAX_DOCUMENT_UPLOAD_SIZE_MB: int = 50
+    ALLOWED_DOCUMENT_CONTENT_TYPES: Annotated[list[str], NoDecode] = ["application/pdf"]
+
+    @field_validator("ALLOWED_DOCUMENT_CONTENT_TYPES", mode="before")
+    @classmethod
+    def split_document_content_types(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    # Chunking (configurable so evaluation runs can sweep these for IEEE writeup)
+    RAG_CHUNK_SIZE_CHARS: int = 1200
+    RAG_CHUNK_OVERLAP_CHARS: int = 200
+
+    # Embedding model (sentence-transformers, lazily loaded — see app/rag/embedding.py)
+    RAG_EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    RAG_EMBEDDING_DEVICE: str = "auto"
+    RAG_EMBEDDING_BATCH_SIZE: int = 32
+
+    # Retrieval
+    RAG_TOP_K: int = 5
+    RAG_SIMILARITY_THRESHOLD: float = 0.25
+    RAG_MAX_CONTEXT_CHARS: int = 6000
+
+    # Generation (feeds into VLMInferencePipeline.chat via the prompt builder)
+    RAG_MAX_NEW_TOKENS: int = 500
 
     # --- Dataset (Sprint 3: Image Analysis) ---
     DATASET_ROOT: str = "../datasets"
@@ -87,7 +120,7 @@ class Settings(BaseSettings):
     # --- Upload storage ---
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 15
-    ALLOWED_UPLOAD_CONTENT_TYPES: Annotated[List[str], NoDecode] = [
+    ALLOWED_UPLOAD_CONTENT_TYPES: Annotated[list[str], NoDecode] = [
         "image/jpeg",
         "image/png",
         "image/webp",
@@ -95,7 +128,7 @@ class Settings(BaseSettings):
 
     @field_validator("ALLOWED_UPLOAD_CONTENT_TYPES", mode="before")
     @classmethod
-    def split_upload_content_types(cls, value: str | List[str]) -> List[str]:
+    def split_upload_content_types(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value

@@ -73,6 +73,22 @@ def configure_logging() -> None:
         enqueue=True,
     )
 
+    # Dedicated JSON-lines sink (Sprint 5): purely additive, always serialized
+    # regardless of LOG_SERIALIZE_JSON, so `GET /developer/logs` has a stable
+    # machine-readable source to filter/paginate without depending on the
+    # human-readable sinks above ever changing format.
+    logger.add(
+        log_dir / "structured.jsonl",
+        level=settings.LOG_LEVEL,
+        rotation=settings.LOG_ROTATION,
+        retention=settings.LOG_RETENTION,
+        compression="zip",
+        serialize=True,
+        backtrace=False,
+        diagnose=False,
+        enqueue=True,
+    )
+
     # Route stdlib/uvicorn logging through Loguru for a single unified log stream.
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
     for noisy_logger in ("uvicorn", "uvicorn.access", "uvicorn.error", "sqlalchemy.engine"):

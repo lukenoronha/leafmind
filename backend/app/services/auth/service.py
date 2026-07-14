@@ -7,7 +7,7 @@ background job) without duplicating it in a router.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import select
@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.exceptions import LeafMindError
 from app.core.security import (
-    PasswordPolicyError,
     TokenError,
     TokenType,
     create_access_token,
@@ -28,7 +27,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.refresh_token import RefreshToken
-from app.models.role import Role, RoleName
+from app.models.role import Role
 from app.models.user import User
 from app.schemas.auth import TokenResponse
 
@@ -41,7 +40,7 @@ def _as_aware_utc(value: datetime) -> datetime:
     `datetime.now(timezone.utc)` requires both sides to be aware, so naive
     values read back from the DB are assumed UTC and normalized here.
     """
-    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
 
 
 class AuthError(LeafMindError):
@@ -136,7 +135,7 @@ class AuthService:
 
         if stored is not None and not stored.is_revoked:
             stored.is_revoked = True
-            stored.revoked_at = datetime.now(timezone.utc)
+            stored.revoked_at = datetime.now(UTC)
             await self.db.commit()
             logger.info("Refresh token revoked (logout) for user_id={}", stored.user_id)
         # Logout is idempotent: an already-revoked or unknown token still returns success
@@ -157,7 +156,7 @@ class AuthService:
         if stored is None or stored.is_revoked:
             raise InvalidTokenError("Refresh token has been revoked or does not exist.")
 
-        if _as_aware_utc(stored.expires_at) < datetime.now(timezone.utc):
+        if _as_aware_utc(stored.expires_at) < datetime.now(UTC):
             raise InvalidTokenError("Refresh token has expired.")
 
         user = await self.db.get(User, uuid.UUID(payload.sub))
@@ -167,7 +166,7 @@ class AuthService:
         # Rotate: revoke the presented token and issue a brand-new pair. This limits
         # the blast radius of a stolen refresh token to a single use.
         stored.is_revoked = True
-        stored.revoked_at = datetime.now(timezone.utc)
+        stored.revoked_at = datetime.now(UTC)
 
         tokens = await self._issue_token_pair(user)
         logger.info("Refresh token rotated for user={}", user.email)
@@ -194,7 +193,7 @@ class AuthService:
                 RefreshToken.user_id == user.id, RefreshToken.is_revoked.is_(False)
             )
         )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for token in result.scalars():
             token.is_revoked = True
             token.revoked_at = now
@@ -221,7 +220,7 @@ class AuthService:
             RefreshToken(
                 user_id=user.id,
                 token_hash=hash_token(refresh_token),
-                expires_at=datetime.now(timezone.utc)
+                expires_at=datetime.now(UTC)
                 + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS),
             )
         )

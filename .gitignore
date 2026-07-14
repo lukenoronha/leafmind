@@ -75,7 +75,7 @@ logs/
 # ============================================================
 # AI / ML Training Outputs
 # ============================================================
-models/
+/models/
 checkpoints/
 outputs/
 runs/
@@ -106,6 +106,8 @@ temp/
 .cache/
 cache/
 backend/uploads/
+backend/documents/
+backend/chroma_data/
 
 # ============================================================
 # Docker

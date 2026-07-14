@@ -16,7 +16,6 @@ import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
@@ -28,7 +27,7 @@ class DatasetClass:
     """A single species/class entry from the dataset taxonomy."""
 
     class_id: int
-    training_label: Optional[str]
+    training_label: str | None
     folder_name: str
     status: str
 
@@ -55,7 +54,7 @@ class DatasetLoader:
         self._root = Path(settings.DATASET_ROOT)
         self._raw_dir = self._root / settings.DATASET_RAW_SUBDIR
         self._metadata_dir = self._root / settings.DATASET_METADATA_SUBDIR
-        self._classes: Optional[list[DatasetClass]] = None
+        self._classes: list[DatasetClass] | None = None
 
     @property
     def raw_dir(self) -> Path:
@@ -104,7 +103,7 @@ class DatasetLoader:
         """
         return [c.display_name for c in self.load_classes() if c.is_verified]
 
-    def find_class_by_name(self, name: str) -> Optional[DatasetClass]:
+    def find_class_by_name(self, name: str) -> DatasetClass | None:
         """Case-insensitive lookup of a class by its display name or folder name."""
         normalized = name.strip().lower()
         for candidate in self.load_classes():
@@ -132,6 +131,20 @@ class DatasetLoader:
             "raw_dir_exists": self._raw_dir.is_dir(),
             "raw_dir": str(self._raw_dir),
         }
+
+    def invalidate_cache(self) -> None:
+        """Drops the cached class taxonomy so the next `load_classes()` call
+        re-reads `classes.json` from disk.
+
+        Called by `app.services.admin.dataset_service.DatasetManagementService`
+        after it writes to `metadata/classes.json` (upload/replace/delete of a
+        class), since `get_dataset_loader()` is a process-wide `@lru_cache`d
+        singleton whose `_classes` cache would otherwise never see the
+        change without a restart. Does not change what `load_classes()`
+        returns for callers who don't call this — a pure cache-bust, no
+        change to existing read behavior.
+        """
+        self._classes = None
 
 
 @lru_cache

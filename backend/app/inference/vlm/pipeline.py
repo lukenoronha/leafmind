@@ -89,7 +89,18 @@ class VLMInferencePipeline:
             pil_image=pil_image,
             prediction_context=prediction_context,
         )
+        return self.generate_from_messages(messages, max_new_tokens=max_new_tokens)
 
+    def generate_from_messages(
+        self, messages: list[dict], *, max_new_tokens: int | None = None
+    ) -> ChatTurn:
+        """Run one generation turn on already-built chat-format messages.
+
+        Used directly by callers that build their own message list (e.g.
+        `RAGService` via `app.rag.prompt_builder`), so retrieval-augmented
+        prompts share the exact same generation/timing/logging path as
+        `chat()` without duplicating it.
+        """
         start = time.perf_counter()
         try:
             raw_response, prompt_tokens, completion_tokens = self._backend.generate(

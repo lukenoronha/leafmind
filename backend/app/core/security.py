@@ -8,7 +8,7 @@ worker) without pulling in FastAPI request/response types.
 import hashlib
 import re
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -118,7 +118,7 @@ def create_refresh_token(*, user_id: uuid.UUID, role: str) -> tuple[str, str]:
 def _create_token(
     *, user_id: uuid.UUID, role: str, token_type: TokenType, expires_delta: timedelta
 ) -> tuple[str, str]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     jti = str(uuid.uuid4())
     claims: dict[str, Any] = {
         "sub": str(user_id),

@@ -1,5 +1,5 @@
 from app.inference.vlm.pipeline import VLMInferencePipeline
-from app.inference.vlm.schemas import ClassificationCandidate, ClassificationResult, ChatTurn
+from app.inference.vlm.schemas import ChatTurn, ClassificationCandidate, ClassificationResult
 
 __all__ = [
     "VLMInferencePipeline",

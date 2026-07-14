@@ -8,7 +8,7 @@ coupling and could be reused outside the web app (e.g. a batch evaluation
 script) unchanged.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass

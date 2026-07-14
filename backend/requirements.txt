@@ -32,5 +32,12 @@ transformers==4.47.1
 accelerate==1.2.1
 qwen-vl-utils==0.0.8
 
-# Future sprints (uncomment when implementing)
-# chromadb==0.5.23
+# --- Retrieval-Augmented Generation (Sprint 4) ---
+# Heavy ML dependency (sentence embeddings) lazily imported, mirroring the
+# Qwen2.5-VL pattern above — see app/rag/embedding.py.
+chromadb==0.5.23
+pymupdf==1.25.1
+sentence-transformers==3.3.1
+
+# --- Developer API / Observability (Sprint 5) ---
+psutil==6.1.1

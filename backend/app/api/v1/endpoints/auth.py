@@ -5,7 +5,6 @@ issuance/rotation, revocation) lives in `app.services.auth.AuthService`.
 """
 
 from fastapi import APIRouter, status
-from loguru import logger
 
 from app.api.deps import AuthServiceDep, CurrentUserDep
 from app.schemas.auth import (

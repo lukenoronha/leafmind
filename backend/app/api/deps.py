@@ -1,19 +1,18 @@
 """Centralized dependency-injection scaffolding.
 
-Provides typed `Depends`-ready accessors for cross-cutting services. Auth is
-now fully implemented (Sprint 2); AI inference and RAG remain placeholder
-seams for future sprints so routers can already declare the dependencies
-they'll eventually need without a later refactor.
+Provides typed `Depends`-ready accessors for cross-cutting services. Auth,
+image analysis, and RAG are fully implemented; each router depends only on
+the typed `...Dep` alias for its service, never constructing services itself.
 """
 
 import uuid
-from typing import Annotated, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.chat import ChatService
 from app.core.config import Settings, get_settings
 from app.core.security import TokenError, TokenType, decode_token
 from app.db.session import get_db_session
@@ -21,7 +20,9 @@ from app.models.role import RoleName
 from app.models.user import User
 from app.services.auth import AuthService
 from app.services.auth.service import AuthError, InactiveUserError, InvalidTokenError
+from app.services.developer import DeveloperService
 from app.services.image_analysis import ImageAnalysisService
+from app.services.rag import RAGService
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DbSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
@@ -96,28 +97,21 @@ async def get_image_analysis_service(db: DbSessionDep) -> AsyncIterator[ImageAna
 ImageAnalysisServiceDep = Annotated[ImageAnalysisService, Depends(get_image_analysis_service)]
 
 
-# --- Chat (Sprint 3: VLM-only, pre-RAG) ---
+# --- RAG (Sprint 4: grounded chat + document ingestion, replaces Sprint 3 ChatService) ---
 
 
-async def get_chat_service(db: DbSessionDep) -> AsyncIterator[ChatService]:
-    yield ChatService(db)
+async def get_rag_service(db: DbSessionDep) -> AsyncIterator[RAGService]:
+    yield RAGService(db)
 
 
-ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+RAGServiceDep = Annotated[RAGService, Depends(get_rag_service)]
 
 
-# --- Placeholder seam for future sprints ---
+# --- Developer API (Sprint 5: observability — metrics, system status, logs, analytics) ---
 
 
-class RAGServicePlaceholder:
-    """Seam for the future ChromaDB-backed retrieval-augmented generation service."""
-
-    async def is_ready(self) -> bool:
-        return False
+async def get_developer_service(db: DbSessionDep) -> AsyncIterator[DeveloperService]:
+    yield DeveloperService(db)
 
 
-async def get_rag_service() -> AsyncIterator[RAGServicePlaceholder]:
-    yield RAGServicePlaceholder()
-
-
-RAGServiceDep = Annotated[RAGServicePlaceholder, Depends(get_rag_service)]
+DeveloperServiceDep = Annotated[DeveloperService, Depends(get_developer_service)]
