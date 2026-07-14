@@ -258,7 +258,9 @@ export const analysisService = {
   },
 
   /** Related knowledge-base excerpts + disclaimer for a prediction's report. */
-  getPredictionReport: async (predictionId: string): Promise<PredictionReport> => {
+  getPredictionReport: async (
+    predictionId: string,
+  ): Promise<PredictionReport> => {
     const { data } = await apiClient.get<BackendPredictionReportResponse>(
       `/reports/prediction/${predictionId}`,
       { params: { format: 'json' } },
@@ -276,13 +278,4 @@ export const analysisService = {
       })),
     }
   },
-
-  /**
-   * No backend route exists for this (`/predict/{id}/follow-ups` was never
-   * implemented server-side) — kept only so `use-follow-up-questions.ts`
-   * (currently unused by any component) still type-checks. Will 404 if
-   * ever called again.
-   */
-  getFollowUpQuestions: (predictionId: string) =>
-    apiClient.get<string[]>(`/predict/${predictionId}/follow-ups`),
 }

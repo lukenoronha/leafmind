@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Printer } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { ChatPanel, type FeedItem } from '@/components/analysis/chat/ChatPanel'
+import {
+  AnalysisInspector,
+  type InspectorTab,
+} from '@/components/analysis/inspector/AnalysisInspector'
 import { ReportPrintView } from '@/components/analysis/ReportPrintView'
 import { useImageUpload } from '@/hooks/use-image-upload'
 import { usePredict } from '@/hooks/use-predict'
@@ -28,8 +32,13 @@ export default function HomePage() {
     null,
   )
   const [latestImageUrl, setLatestImageUrl] = useState<string | null>(null)
+  const [inspector, setInspector] = useState<{
+    open: boolean
+    predictionId: string | null
+    tab: InspectorTab
+  }>({ open: false, predictionId: null, tab: 'explainability' })
 
-  const { upload, isUploading } = useImageUpload()
+  const { upload, isUploading, progress: uploadProgress } = useImageUpload()
   const { predict, isPredicting } = usePredict()
   const chat = useAnalysisChat(
     latestPrediction?.id ?? '',
@@ -37,28 +46,49 @@ export default function HomePage() {
   )
 
   const isAnalyzing = isUploading || isPredicting
+  const uploadingItemIdRef = useRef<string | null>(null)
 
-  async function handleAttachImage(file: File) {
-    const previewUrl = URL.createObjectURL(file)
-    const imageItemId = crypto.randomUUID()
+  // Mirrors the upload hook's live percentage onto whichever feed item is
+  // currently mid-upload — the hook itself only tracks a single in-flight
+  // value, which is sufficient since attach/replace are both disabled
+  // while an upload or prediction is already running.
+  useEffect(() => {
+    if (!isUploading || !uploadingItemIdRef.current) return
+    updateImageItem(uploadingItemIdRef.current, { progress: uploadProgress })
+  }, [uploadProgress, isUploading])
 
-    setFeed((prev) => [
-      ...prev,
-      { type: 'image', id: imageItemId, previewUrl, isAnalyzing: true },
-    ])
-    setLatestImageUrl(previewUrl)
+  function updateImageItem(
+    id: string,
+    patch: Partial<Extract<FeedItem, { type: 'image' }>>,
+  ) {
+    setFeed((prev) =>
+      prev.map((item) =>
+        item.id === id && item.type === 'image' ? { ...item, ...patch } : item,
+      ),
+    )
+  }
 
+  /** Shared by attach and replace — runs upload -> predict against an
+   * already-inserted feed item, unchanged from the original prediction
+   * pipeline (same hooks, same request shape). */
+  async function runAnalysis(imageItemId: string, file: File) {
+    uploadingItemIdRef.current = imageItemId
     try {
+      updateImageItem(imageItemId, { status: 'uploading', progress: 0 })
       const image = await upload(file)
+      uploadingItemIdRef.current = null
+
+      updateImageItem(imageItemId, {
+        status: 'analyzing',
+        progress: undefined,
+        backendImageId: image.id,
+      })
       const prediction = await predict({ imageId: image.id })
 
       setLatestPrediction(prediction)
+      updateImageItem(imageItemId, { status: 'done' })
       setFeed((prev) => [
-        ...prev.map((item) =>
-          item.id === imageItemId && item.type === 'image'
-            ? { ...item, isAnalyzing: false }
-            : item,
-        ),
+        ...prev,
         { type: 'prediction', id: crypto.randomUUID(), prediction },
       ])
 
@@ -72,34 +102,111 @@ export default function HomePage() {
         // retry this fetch when expanded.
       }
     } catch (error) {
-      setFeed((prev) =>
-        prev.map((item) =>
-          item.id === imageItemId && item.type === 'image'
-            ? { ...item, isAnalyzing: false }
-            : item,
-        ),
-      )
-      toast.error(getApiErrorMessage(error, 'Unable to analyze this image.'))
+      uploadingItemIdRef.current = null
+      const message = getApiErrorMessage(error, 'Unable to analyze this image.')
+      updateImageItem(imageItemId, { status: 'error', errorMessage: message })
+      toast.error(message)
     }
+  }
+
+  async function handleAttachImage(file: File) {
+    const previewUrl = URL.createObjectURL(file)
+    const imageItemId = crypto.randomUUID()
+
+    setFeed((prev) => [
+      ...prev,
+      {
+        type: 'image',
+        id: imageItemId,
+        previewUrl,
+        filename: file.name,
+        sizeBytes: file.size,
+        status: 'uploading',
+        progress: 0,
+      },
+    ])
+    setLatestImageUrl(previewUrl)
+
+    await runAnalysis(imageItemId, file)
+  }
+
+  async function handleReplaceImage(imageItemId: string, file: File) {
+    const previewUrl = URL.createObjectURL(file)
+    updateImageItem(imageItemId, {
+      previewUrl,
+      filename: file.name,
+      sizeBytes: file.size,
+      status: 'uploading',
+      progress: 0,
+      errorMessage: undefined,
+    })
+    setLatestImageUrl(previewUrl)
+
+    await runAnalysis(imageItemId, file)
+  }
+
+  function handleRemoveImage(imageItemId: string) {
+    const removed = feed.find(
+      (item) => item.id === imageItemId && item.type === 'image',
+    )
+    if (!removed) return
+
+    setFeed((prev) => prev.filter((item) => item.id !== imageItemId))
+
+    toast('Photo removed', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setFeed((prev) => {
+            if (prev.some((item) => item.id === imageItemId)) return prev
+            return [...prev, removed]
+          })
+        },
+      },
+    })
   }
 
   function handleSendMessage(message: string) {
     void chat.sendMessage(message)
   }
 
-  const combinedFeed: FeedItem[] = [
-    ...feed,
-    ...chat.messages.map(
-      (message): FeedItem => ({ type: 'message', id: message.id, message }),
-    ),
-  ]
+  const combinedFeed: FeedItem[] = useMemo(
+    () => [
+      ...feed,
+      ...chat.messages.map((message): FeedItem => ({
+        type: 'message',
+        id: message.id,
+        message,
+      })),
+    ],
+    [feed, chat.messages],
+  )
+
+  const inspectorPlantName = useMemo(() => {
+    const inspectorPrediction = combinedFeed.find(
+      (item) =>
+        item.type === 'prediction' &&
+        item.prediction.id === inspector.predictionId,
+    )
+    return inspectorPrediction?.type === 'prediction'
+      ? inspectorPrediction.prediction.plantName
+      : ''
+  }, [combinedFeed, inspector.predictionId])
+
+  function handleOpenInspector(predictionId: string, tab: InspectorTab) {
+    setInspector({ open: true, predictionId, tab })
+  }
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] flex-col space-y-4">
+    <div className="flex h-[calc(100svh-3.5rem-3rem)] flex-col gap-6">
       <div className="print:hidden">
         <PageHeader
           title="New Analysis"
-          description="Attach a leaf photo to identify the plant and ask questions about it."
+          description={
+            latestPrediction
+              ? `Identified as ${latestPrediction.plantName}. Ask about its medicinal properties, safety, or traditional uses.`
+              : 'Attach a leaf photo to identify the plant and ask questions about it.'
+          }
           actions={
             latestPrediction ? (
               <Button
@@ -116,14 +223,29 @@ export default function HomePage() {
         />
       </div>
 
-      <ChatPanel
-        feed={combinedFeed}
-        isSending={chat.isSending}
-        onSendMessage={handleSendMessage}
-        onAttachImage={(file) => void handleAttachImage(file)}
-        attachDisabled={isAnalyzing}
-        className="flex-1 print:hidden"
-      />
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-0">
+        <ChatPanel
+          feed={combinedFeed}
+          isSending={chat.isSending}
+          onSendMessage={handleSendMessage}
+          onAttachImage={(file) => void handleAttachImage(file)}
+          onReplaceImage={(id, file) => void handleReplaceImage(id, file)}
+          onRemoveImage={handleRemoveImage}
+          onOpenInspector={handleOpenInspector}
+          attachDisabled={isAnalyzing}
+          className="min-h-0 flex-1 print:hidden"
+        />
+
+        <AnalysisInspector
+          open={inspector.open}
+          onOpenChange={(open) => setInspector((prev) => ({ ...prev, open }))}
+          tab={inspector.tab}
+          onTabChange={(tab) => setInspector((prev) => ({ ...prev, tab }))}
+          predictionId={inspector.predictionId}
+          plantName={inspectorPlantName}
+          className="print:hidden"
+        />
+      </div>
 
       {latestPrediction && latestReport ? (
         <ReportPrintView

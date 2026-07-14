@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import { Plus, SendHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { UploadErrorCard } from '@/components/analysis/empty-state/UploadErrorCard'
 import {
   ACCEPTED_IMAGE_TYPES_ACCEPT_ATTR,
   validateLeafImageFile,
@@ -70,6 +71,7 @@ export function ChatInput({
               ref={fileInputRef}
               type="file"
               accept={ACCEPTED_IMAGE_TYPES_ACCEPT_ATTR}
+              aria-label="Attach a leaf photo"
               className="hidden"
               onChange={(event) => handleFileChange(event.target.files)}
             />
@@ -96,11 +98,7 @@ export function ChatInput({
           <SendHorizontal className="size-4" />
         </Button>
       </div>
-      {attachError ? (
-        <p role="alert" className="text-destructive px-1 text-xs">
-          {attachError}
-        </p>
-      ) : null}
+      {attachError ? <UploadErrorCard message={attachError} /> : null}
     </div>
   )
 }

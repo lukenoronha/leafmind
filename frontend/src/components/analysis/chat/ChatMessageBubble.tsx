@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
-import { Bot, Check, Copy, User } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import {
+  Bot,
+  Check,
+  Copy,
+  RotateCcw,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SourcesPanel } from '@/components/analysis/chat/SourcesPanel'
 import { CITATION_HREF_PREFIX, linkifyCitations } from '@/lib/citations'
@@ -14,6 +23,7 @@ interface ChatMessageBubbleProps {
 export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
   const [copied, setCopied] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
+  const prefersReducedMotion = useReducedMotion()
   const isUser = message.role === 'user'
   const sourceCount = message.sources?.length ?? 0
 
@@ -29,7 +39,10 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
   }
 
   return (
-    <div
+    <motion.div
+      initial={prefersReducedMotion ? undefined : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
       className={cn(
         'group flex w-full gap-3',
         isUser ? 'flex-row-reverse' : 'flex-row',
@@ -60,6 +73,13 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
               : 'bg-muted text-foreground rounded-tl-sm',
           )}
         >
+          {/* Renders the complete response as soon as it arrives — the
+           * backend has no token streaming (POST /rag/query returns the
+           * full answer in one response), so this deliberately does not
+           * simulate a typing/reveal animation over already-complete text.
+           * The markdown tree itself renders in one pass regardless of
+           * whether future content arrives incrementally or all at once,
+           * so no restructuring would be needed if streaming is added. */}
           <div className="prose prose-sm dark:prose-invert prose-p:my-1.5 prose-pre:my-2 prose-ul:my-1.5 prose-ol:my-1.5 max-w-none">
             <Markdown
               components={{
@@ -101,23 +121,53 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           />
         ) : null}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
           <Button
             type="button"
             variant="ghost"
-            size="icon"
-            className="size-6 opacity-0 transition-opacity group-hover:opacity-100"
+            size="icon-xs"
             onClick={handleCopy}
             aria-label="Copy message"
           >
-            {copied ? (
-              <Check className="text-success size-3.5" />
-            ) : (
-              <Copy className="size-3.5" />
-            )}
+            {copied ? <Check className="text-success" /> : <Copy />}
           </Button>
+
+          {!isUser ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+                title="Regenerate response — coming soon"
+                aria-label="Regenerate response (coming soon)"
+              >
+                <RotateCcw />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+                title="Feedback — coming soon"
+                aria-label="Mark helpful (coming soon)"
+              >
+                <ThumbsUp />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled
+                title="Feedback — coming soon"
+                aria-label="Mark not helpful (coming soon)"
+              >
+                <ThumbsDown />
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
