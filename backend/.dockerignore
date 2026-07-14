@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+.venv
+venv
+.env
+.pytest_cache
+logs
+uploads
+documents
+chroma_data
+leafmind.db
+tests
+.mypy_cache
+.ruff_cache

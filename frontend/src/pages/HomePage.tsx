@@ -2,16 +2,9 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Printer } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
-import { ErrorState } from '@/components/common/ErrorState'
 import { Button } from '@/components/ui/button'
-import {
-  ImageUploader,
-  type UploadStatus,
-} from '@/components/analysis/ImageUploader'
-import { PredictionCard } from '@/components/analysis/PredictionCard'
-import { HealthReportCard } from '@/components/analysis/HealthReportCard'
+import { ChatPanel, type FeedItem } from '@/components/analysis/chat/ChatPanel'
 import { ReportPrintView } from '@/components/analysis/ReportPrintView'
-import { ChatPanel } from '@/components/analysis/chat/ChatPanel'
 import { useImageUpload } from '@/hooks/use-image-upload'
 import { usePredict } from '@/hooks/use-predict'
 import { useAnalysisChat } from '@/hooks/use-analysis-chat'
@@ -19,65 +12,96 @@ import { analysisService } from '@/services/analysis.service'
 import { getApiErrorMessage } from '@/lib/api-error'
 import type { Prediction, PredictionReport } from '@/types/analysis'
 
+/**
+ * Single, centered, ChatGPT-style page: one conversation feed with a "+"
+ * attach button in the input to upload a leaf photo inline, rather than a
+ * separate upload box + side-panel chat. The prediction result and its
+ * "related knowledge" section render as messages in the feed itself (see
+ * ChatPanel/PredictionResultCard).
+ */
 export default function HomePage() {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [result, setResult] = useState<{
-    prediction: Prediction
-    report: PredictionReport
-  } | null>(null)
-  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [feed, setFeed] = useState<FeedItem[]>([])
+  const [latestPrediction, setLatestPrediction] = useState<Prediction | null>(
+    null,
+  )
+  const [latestReport, setLatestReport] = useState<PredictionReport | null>(
+    null,
+  )
+  const [latestImageUrl, setLatestImageUrl] = useState<string | null>(null)
 
-  const { upload, isUploading, progress, reset: resetUpload } = useImageUpload()
-  const { predict, isPredicting, reset: resetPredict } = usePredict()
+  const { upload, isUploading } = useImageUpload()
+  const { predict, isPredicting } = usePredict()
   const chat = useAnalysisChat(
-    result?.prediction.id ?? '',
-    result?.prediction.imageId,
+    latestPrediction?.id ?? '',
+    latestPrediction?.imageId,
   )
 
-  const status: UploadStatus = analysisError
-    ? 'error'
-    : isUploading
-      ? 'uploading'
-      : isPredicting
-        ? 'processing'
-        : 'idle'
+  const isAnalyzing = isUploading || isPredicting
 
-  async function handleFileSelected(file: File) {
-    setAnalysisError(null)
-    setResult(null)
-    const objectUrl = URL.createObjectURL(file)
-    setPreviewUrl(objectUrl)
+  async function handleAttachImage(file: File) {
+    const previewUrl = URL.createObjectURL(file)
+    const imageItemId = crypto.randomUUID()
+
+    setFeed((prev) => [
+      ...prev,
+      { type: 'image', id: imageItemId, previewUrl, isAnalyzing: true },
+    ])
+    setLatestImageUrl(previewUrl)
 
     try {
       const image = await upload(file)
       const prediction = await predict({ imageId: image.id })
-      const report = await analysisService.getPredictionReport(prediction.id)
-      setResult({ prediction, report })
+
+      setLatestPrediction(prediction)
+      setFeed((prev) => [
+        ...prev.map((item) =>
+          item.id === imageItemId && item.type === 'image'
+            ? { ...item, isAnalyzing: false }
+            : item,
+        ),
+        { type: 'prediction', id: crypto.randomUUID(), prediction },
+      ])
+
+      // Fetched once here (not just lazily inside the card) so the print
+      // view has real report data available as soon as one exists.
+      try {
+        const report = await analysisService.getPredictionReport(prediction.id)
+        setLatestReport(report)
+      } catch {
+        // Non-fatal — PredictionResultCard's own collapsible section will
+        // retry this fetch when expanded.
+      }
     } catch (error) {
-      setAnalysisError(
-        getApiErrorMessage(error, 'Unable to analyze this image.'),
+      setFeed((prev) =>
+        prev.map((item) =>
+          item.id === imageItemId && item.type === 'image'
+            ? { ...item, isAnalyzing: false }
+            : item,
+        ),
       )
-      toast.error('Analysis failed. Please try again.')
+      toast.error(getApiErrorMessage(error, 'Unable to analyze this image.'))
     }
   }
 
-  function handleClear() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-    setResult(null)
-    setAnalysisError(null)
-    resetUpload()
-    resetPredict()
+  function handleSendMessage(message: string) {
+    void chat.sendMessage(message)
   }
 
+  const combinedFeed: FeedItem[] = [
+    ...feed,
+    ...chat.messages.map(
+      (message): FeedItem => ({ type: 'message', id: message.id, message }),
+    ),
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100vh-6rem)] flex-col space-y-4">
       <div className="print:hidden">
         <PageHeader
           title="New Analysis"
-          description="Upload a leaf photo to identify the plant and get a medicinal health report."
+          description="Attach a leaf photo to identify the plant and ask questions about it."
           actions={
-            result ? (
+            latestPrediction ? (
               <Button
                 type="button"
                 variant="outline"
@@ -92,51 +116,20 @@ export default function HomePage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] print:hidden">
-        <div className="space-y-6">
-          <ImageUploader
-            status={status}
-            progress={progress}
-            errorMessage={analysisError ?? undefined}
-            previewUrl={previewUrl}
-            onFileSelected={handleFileSelected}
-            onClear={handleClear}
-          />
+      <ChatPanel
+        feed={combinedFeed}
+        isSending={chat.isSending}
+        onSendMessage={handleSendMessage}
+        onAttachImage={(file) => void handleAttachImage(file)}
+        attachDisabled={isAnalyzing}
+        className="flex-1 print:hidden"
+      />
 
-          {analysisError ? (
-            <ErrorState
-              title="Analysis failed"
-              description={analysisError}
-              onRetry={handleClear}
-            />
-          ) : null}
-
-          {result ? <PredictionCard prediction={result.prediction} /> : null}
-          {result ? <HealthReportCard report={result.report} /> : null}
-        </div>
-
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          {result ? (
-            <ChatPanel
-              plantName={result.prediction.plantName}
-              messages={chat.messages}
-              isSending={chat.isSending}
-              onSendMessage={chat.sendMessage}
-              className="h-[calc(100vh-14rem)] min-h-112"
-            />
-          ) : (
-            <div className="text-muted-foreground flex h-64 items-center justify-center rounded-xl border border-dashed text-center text-sm lg:h-[calc(100vh-14rem)] lg:min-h-112">
-              Upload a plant photo to start a conversation about it.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {result ? (
+      {latestPrediction && latestReport ? (
         <ReportPrintView
-          prediction={result.prediction}
-          report={result.report}
-          imageUrl={previewUrl}
+          prediction={latestPrediction}
+          report={latestReport}
+          imageUrl={latestImageUrl}
           messages={chat.messages}
         />
       ) : null}

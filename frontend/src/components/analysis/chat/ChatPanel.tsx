@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { MessageCircle } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Leaf } from 'lucide-react'
 import { ChatMessageBubble } from '@/components/analysis/chat/ChatMessageBubble'
+import { ImageUploadBubble } from '@/components/analysis/chat/ImageUploadBubble'
+import { PredictionResultCard } from '@/components/analysis/chat/PredictionResultCard'
 import { TypingIndicator } from '@/components/analysis/chat/TypingIndicator'
 import { SuggestedPrompts } from '@/components/analysis/chat/SuggestedPrompts'
 import { ChatInput } from '@/components/analysis/chat/ChatInput'
-import type { ChatMessage } from '@/types/analysis'
+import type { ChatMessage, Prediction } from '@/types/analysis'
 import { cn } from '@/lib/utils'
 
 const FALLBACK_PROMPTS = [
@@ -15,60 +16,89 @@ const FALLBACK_PROMPTS = [
   'How is this plant typically prepared or dosed?',
 ]
 
+export type FeedItem =
+  | { type: 'image'; id: string; previewUrl: string; isAnalyzing: boolean }
+  | { type: 'prediction'; id: string; prediction: Prediction }
+  | { type: 'message'; id: string; message: ChatMessage }
+
 interface ChatPanelProps {
-  plantName: string
-  messages: ChatMessage[]
+  feed: FeedItem[]
   isSending: boolean
   onSendMessage: (message: string) => void
+  onAttachImage: (file: File) => void
+  attachDisabled?: boolean
   className?: string
 }
 
+/**
+ * Single, centered, ChatGPT-style conversation column — no separate upload
+ * box or side panel. Every feed item (uploaded image, prediction result,
+ * text message) renders inline in one scrollable timeline, with the "+"
+ * attach button living in ChatInput at the bottom.
+ */
 export function ChatPanel({
-  plantName,
-  messages,
+  feed,
   isSending,
   onSendMessage,
+  onAttachImage,
+  attachDisabled,
   className,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (messages.length === 0) return
+    if (feed.length === 0) return
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [messages, isSending])
+  }, [feed, isSending])
 
   return (
-    <Card className={cn('flex flex-col', className)}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageCircle className="text-primary size-4" />
-          Ask about {plantName}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4">
-        <div className="flex min-h-64 flex-1 flex-col gap-4 overflow-y-auto pr-1">
-          {messages.length === 0 && !isSending ? (
-            <p className="text-muted-foreground text-sm">
-              Ask a question about this identification — dosage, traditional
-              uses, precautions, or anything else you'd like to know.
+    <div className={cn('mx-auto flex w-full max-w-3xl flex-col gap-4', className)}>
+      <div className="flex min-h-64 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        {feed.length === 0 ? (
+          <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 text-center text-sm">
+            <Leaf className="text-muted-foreground/50 size-8" />
+            <p>
+              Attach a leaf photo with the + button to identify a plant and
+              start a conversation about it.
             </p>
-          ) : (
-            messages.map((message) => (
-              <ChatMessageBubble key={message.id} message={message} />
-            ))
-          )}
-          {isSending ? <TypingIndicator /> : null}
-          <div ref={bottomRef} />
-        </div>
+          </div>
+        ) : (
+          feed.map((item) => {
+            if (item.type === 'image') {
+              return (
+                <ImageUploadBubble
+                  key={item.id}
+                  previewUrl={item.previewUrl}
+                  isAnalyzing={item.isAnalyzing}
+                />
+              )
+            }
+            if (item.type === 'prediction') {
+              return (
+                <PredictionResultCard key={item.id} prediction={item.prediction} />
+              )
+            }
+            return <ChatMessageBubble key={item.id} message={item.message} />
+          })
+        )}
+        {isSending ? <TypingIndicator /> : null}
+        <div ref={bottomRef} />
+      </div>
 
+      {feed.length > 0 ? (
         <SuggestedPrompts
           prompts={FALLBACK_PROMPTS}
           onSelect={onSendMessage}
           disabled={isSending}
         />
+      ) : null}
 
-        <ChatInput onSend={onSendMessage} disabled={isSending} />
-      </CardContent>
-    </Card>
+      <ChatInput
+        onSend={onSendMessage}
+        onAttachImage={onAttachImage}
+        attachDisabled={attachDisabled}
+        disabled={isSending}
+      />
+    </div>
   )
 }

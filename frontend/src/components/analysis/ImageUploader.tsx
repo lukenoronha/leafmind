@@ -2,10 +2,11 @@ import { useCallback, useRef, useState, type DragEvent } from 'react'
 import { ImageUp, Loader2, RotateCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import {
+  ACCEPTED_IMAGE_TYPES_ACCEPT_ATTR,
+  validateLeafImageFile,
+} from '@/lib/image-validation'
 import { cn } from '@/lib/utils'
-
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
 export type UploadStatus = 'idle' | 'uploading' | 'processing' | 'error'
 
@@ -17,16 +18,6 @@ interface ImageUploaderProps {
   onFileSelected: (file: File) => void
   onClear: () => void
   className?: string
-}
-
-function validateFile(file: File): string | null {
-  if (!ACCEPTED_TYPES.includes(file.type)) {
-    return 'Unsupported file type. Upload a JPEG, PNG, or WEBP image.'
-  }
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return 'Image is too large. Maximum size is 10 MB.'
-  }
-  return null
 }
 
 export function ImageUploader({
@@ -49,7 +40,7 @@ export function ImageUploader({
       const file = files?.[0]
       if (!file) return
 
-      const error = validateFile(file)
+      const error = validateLeafImageFile(file)
       setValidationError(error)
       if (error) return
 
@@ -124,7 +115,7 @@ export function ImageUploader({
         <input
           ref={inputRef}
           type="file"
-          accept={ACCEPTED_TYPES.join(',')}
+          accept={ACCEPTED_IMAGE_TYPES_ACCEPT_ATTR}
           className="hidden"
           onChange={(event) => handleFiles(event.target.files)}
         />
@@ -173,7 +164,7 @@ export function ImageUploader({
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPTED_TYPES.join(',')}
+        accept={ACCEPTED_IMAGE_TYPES_ACCEPT_ATTR}
         className="hidden"
         onChange={(event) => handleFiles(event.target.files)}
       />
