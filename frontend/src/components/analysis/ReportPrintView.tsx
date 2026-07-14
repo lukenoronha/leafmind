@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
 import logoSrc from '@/assets/images/logo.png'
-import type { ChatMessage, Prediction, PredictionReport, Source } from '@/types/analysis'
+import type {
+  ChatMessage,
+  Prediction,
+  PredictionReport,
+  Source,
+} from '@/types/analysis'
 
 interface ReportPrintViewProps {
   prediction: Prediction
@@ -77,7 +82,9 @@ export function ReportPrintView({
       </section>
 
       <section className="mb-6">
-        <h2 className="mb-2 text-lg font-bold">Related knowledge base information</h2>
+        <h2 className="mb-2 text-lg font-bold">
+          Related knowledge base information
+        </h2>
         {report.knowledgeAvailable ? (
           <ol className="list-decimal space-y-2 pl-5 text-sm">
             {report.relatedKnowledge.map((chunk, index) => (
@@ -104,8 +111,10 @@ export function ReportPrintView({
               <li key={source.chunkId}>
                 {source.documentName}
                 {source.chapter ? `, ${source.chapter}` : ''}
-                {source.pageNumber !== null ? ` (p. ${source.pageNumber})` : ''}
-                {' '}&mdash; {Math.round(source.score * 100)}% retrieval score
+                {source.pageNumber !== null
+                  ? ` (p. ${source.pageNumber})`
+                  : ''}{' '}
+                &mdash; {Math.round(source.score * 100)}% retrieval score
               </li>
             ))}
           </ol>

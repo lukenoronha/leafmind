@@ -215,3 +215,23 @@
     background: #fff;
   }
 }
+
+/*
+ * Global reduced-motion safety net. Framer Motion consumers already gate
+ * themselves individually via useReducedMotion(), but plain Tailwind
+ * `transition-*`/`animate-*` utilities (hover color fades, chevron
+ * rotations, the upload progress ring, tw-animate-css page transitions)
+ * don't respect prefers-reduced-motion on their own. Capping duration
+ * instead of disabling animations outright avoids breaking components
+ * that key state changes off animation completion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
