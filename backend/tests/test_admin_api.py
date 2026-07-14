@@ -1,6 +1,7 @@
 """End-to-end tests for the admin API layer (Sprint 6, wired up in Sprint 7)."""
 
 import io
+import json
 
 import numpy as np
 from PIL import Image
@@ -128,7 +129,16 @@ async def test_delete_user_is_soft_delete(client, admin_headers, auth_headers):
 # --- Dataset management ---
 
 
-async def test_dataset_statistics_and_list(client, admin_headers):
+def _seed_dataset_metadata(tmp_path) -> None:
+    metadata_dir = tmp_path / "admin_dataset" / "metadata"
+    metadata_dir.mkdir(parents=True, exist_ok=True)
+    (metadata_dir / "classes.json").write_text(json.dumps({"classes": []}), encoding="utf-8")
+    (tmp_path / "admin_dataset" / "raw" / "medicinal_leaf_images").mkdir(parents=True, exist_ok=True)
+
+
+async def test_dataset_statistics_and_list(client, admin_headers, tmp_path):
+    _seed_dataset_metadata(tmp_path)
+
     stats = await client.get("/api/v1/admin/datasets/statistics", headers=admin_headers)
     assert stats.status_code == 200
     assert "total_classes" in stats.json()
@@ -137,7 +147,9 @@ async def test_dataset_statistics_and_list(client, admin_headers):
     assert listing.status_code == 200
 
 
-async def test_dataset_upload_and_delete_class(client, admin_headers):
+async def test_dataset_upload_and_delete_class(client, admin_headers, tmp_path):
+    _seed_dataset_metadata(tmp_path)
+
     files = [("files", ("leaf1.jpg", _make_jpeg_bytes(), "image/jpeg"))]
     upload = await client.post(
         "/api/v1/admin/datasets/upload",
