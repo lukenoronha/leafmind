@@ -27,7 +27,7 @@ function createMessage(
  * Retrieval itself happens entirely server-side — this hook only
  * consumes and renders the events the backend emits.
  */
-export function useAnalysisChat(predictionId: string) {
+export function useAnalysisChat(predictionId: string, plantName?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     chatStorage.load(predictionId),
   )
@@ -45,8 +45,8 @@ export function useAnalysisChat(predictionId: string) {
   }
 
   useEffect(() => {
-    chatStorage.save(predictionId, messages)
-  }, [predictionId, messages])
+    chatStorage.save(predictionId, messages, plantName)
+  }, [predictionId, messages, plantName])
 
   const sendMessage = useCallback(
     async (content: string) => {

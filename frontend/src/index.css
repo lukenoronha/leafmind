@@ -196,3 +196,22 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/*
+ * Print support for the report viewer. ReportPrintView renders a
+ * print-only layout (plain black-on-white, no app chrome) that stays
+ * hidden until the browser's print dialog opens, at which point
+ * @media print flips the visibility so "Download PDF" (window.print())
+ * produces a clean report instead of the interactive dashboard.
+ */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block;
+    color: #000;
+    background: #fff;
+  }
+}

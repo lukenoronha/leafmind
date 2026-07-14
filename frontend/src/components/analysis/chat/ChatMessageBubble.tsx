@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
 import { Bot, Check, Copy, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConfidenceBadge } from '@/components/analysis/ConfidenceBadge'
 import { SourcesPanel } from '@/components/analysis/chat/SourcesPanel'
+import { CITATION_HREF_PREFIX, linkifyCitations } from '@/lib/citations'
 import type { ChatMessage } from '@/types/analysis'
 import { cn } from '@/lib/utils'
 
@@ -13,7 +14,14 @@ interface ChatMessageBubbleProps {
 
 export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
   const [copied, setCopied] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null)
   const isUser = message.role === 'user'
+  const sourceCount = message.sources?.length ?? 0
+
+  const content = useMemo(
+    () => linkifyCitations(message.content || ' ', sourceCount),
+    [message.content, sourceCount],
+  )
 
   async function handleCopy() {
     await navigator.clipboard.writeText(message.content)
@@ -54,7 +62,34 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           )}
         >
           <div className="prose prose-sm dark:prose-invert prose-p:my-1.5 prose-pre:my-2 prose-ul:my-1.5 prose-ol:my-1.5 max-w-none">
-            <Markdown>{message.content || ' '}</Markdown>
+            <Markdown
+              components={{
+                a: ({ href, children }) => {
+                  if (href?.startsWith(CITATION_HREF_PREFIX)) {
+                    const index = Number(
+                      href.slice(CITATION_HREF_PREFIX.length),
+                    )
+                    return (
+                      <button
+                        type="button"
+                        className="text-primary bg-primary/10 hover:bg-primary/20 mx-0.5 inline-flex size-4 items-center justify-center rounded-full align-super text-[0.65rem] font-semibold no-underline"
+                        onClick={() => setHighlightedIndex(index)}
+                        aria-label={`Jump to source ${index}`}
+                      >
+                        {index}
+                      </button>
+                    )
+                  }
+                  return (
+                    <a href={href} target="_blank" rel="noreferrer">
+                      {children}
+                    </a>
+                  )
+                },
+              }}
+            >
+              {content}
+            </Markdown>
           </div>
           {message.isStreaming ? (
             <span
@@ -65,7 +100,12 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         </div>
 
         {!isUser && message.sources && message.sources.length > 0 ? (
-          <SourcesPanel sources={message.sources} className="w-full" />
+          <SourcesPanel
+            sources={message.sources}
+            messageId={message.id}
+            highlightedIndex={highlightedIndex}
+            className="w-full"
+          />
         ) : null}
 
         <div className="flex items-center gap-2">

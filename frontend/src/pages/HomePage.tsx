@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Printer } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ErrorState } from '@/components/common/ErrorState'
+import { Button } from '@/components/ui/button'
 import {
   ImageUploader,
   type UploadStatus,
 } from '@/components/analysis/ImageUploader'
 import { PredictionCard } from '@/components/analysis/PredictionCard'
 import { HealthReportCard } from '@/components/analysis/HealthReportCard'
+import { ReportPrintView } from '@/components/analysis/ReportPrintView'
 import { ChatPanel } from '@/components/analysis/chat/ChatPanel'
 import { useImageUpload } from '@/hooks/use-image-upload'
 import { usePredict } from '@/hooks/use-predict'
@@ -26,7 +29,10 @@ export default function HomePage() {
 
   const { upload, isUploading, progress, reset: resetUpload } = useImageUpload()
   const { predict, isPredicting, reset: resetPredict } = usePredict()
-  const chat = useAnalysisChat(result?.prediction.id ?? '')
+  const chat = useAnalysisChat(
+    result?.prediction.id ?? '',
+    result?.prediction.plantName,
+  )
   const followUps = useFollowUpQuestions(result?.prediction.id ?? '')
 
   const status: UploadStatus = analysisError
@@ -66,12 +72,27 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="New Analysis"
-        description="Upload a leaf photo to identify the plant and get a medicinal health report."
-      />
+      <div className="print:hidden">
+        <PageHeader
+          title="New Analysis"
+          description="Upload a leaf photo to identify the plant and get a medicinal health report."
+          actions={
+            result ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+              >
+                <Printer />
+                Download PDF
+              </Button>
+            ) : null
+          }
+        />
+      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] print:hidden">
         <div className="space-y-6">
           <ImageUploader
             status={status}
@@ -112,6 +133,15 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {result ? (
+        <ReportPrintView
+          prediction={result.prediction}
+          report={result.report}
+          imageUrl={previewUrl}
+          messages={chat.messages}
+        />
+      ) : null}
     </div>
   )
 }

@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { UploadDocumentDialog } from '@/components/admin/knowledge/UploadDocumentDialog'
-import { DeleteConfirmDialog } from '@/components/admin/DeleteConfirmDialog'
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import {
   useDeleteKnowledgeDocument,
   useKnowledgeDocuments,

@@ -1,7 +1,9 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { toast } from 'sonner'
 import { env } from '@/config/env'
 import { tokenStorage } from '@/lib/token-storage'
 import { authEvents } from '@/lib/auth-events'
+import { classifyApiError } from '@/lib/api-error'
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
@@ -9,6 +11,7 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
 
 export const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
+  timeout: 20_000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,6 +53,19 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise
 }
 
+// Throttles the "backend unreachable" toast so a burst of failing
+// requests (e.g. several widgets polling at once) shows one message
+// instead of one per request.
+const NETWORK_TOAST_COOLDOWN_MS = 8_000
+let lastNetworkToastAt = 0
+
+function notifyUnreachable(message: string) {
+  const now = Date.now()
+  if (now - lastNetworkToastAt < NETWORK_TOAST_COOLDOWN_MS) return
+  lastNetworkToastAt = now
+  toast.error(message)
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -62,20 +78,35 @@ apiClient.interceptors.response.use(
       !originalRequest._retry &&
       !isAuthEndpoint
 
-    if (!shouldAttemptRefresh) {
-      return Promise.reject(error)
+    if (shouldAttemptRefresh) {
+      originalRequest._retry = true
+      const newAccessToken = await refreshAccessToken()
+
+      if (!newAccessToken) {
+        tokenStorage.clear()
+        authEvents.emitSessionExpired()
+        return Promise.reject(error)
+      }
+
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+      return apiClient(originalRequest)
     }
 
-    originalRequest._retry = true
-    const newAccessToken = await refreshAccessToken()
-
-    if (!newAccessToken) {
-      tokenStorage.clear()
-      authEvents.emitSessionExpired()
-      return Promise.reject(error)
+    if (!isAuthEndpoint) {
+      const kind = classifyApiError(error)
+      if (kind === 'network') {
+        notifyUnreachable(
+          "Can't reach the LeafMind server. Check your connection and try again.",
+        )
+      } else if (kind === 'timeout') {
+        notifyUnreachable('That request took too long and timed out.')
+      } else if (kind === 'server') {
+        notifyUnreachable(
+          'LeafMind is having trouble on our end. Please try again shortly.',
+        )
+      }
     }
 
-    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
-    return apiClient(originalRequest)
+    return Promise.reject(error)
   },
 )

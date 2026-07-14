@@ -1,4 +1,4 @@
-import { LogOut, Settings, User as UserIcon } from 'lucide-react'
+import { LogOut, Presentation, Settings, User as UserIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -15,10 +16,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { useAuth } from '@/hooks/use-auth'
+import { usePresentationMode } from '@/hooks/use-presentation-mode'
 import { ROUTES } from '@/routes/paths'
 
 export function Navbar() {
   const { user, logout } = useAuth()
+  const { isPresentationMode, togglePresentationMode } = usePresentationMode()
   const navigate = useNavigate()
 
   const displayName = user?.name ?? 'Guest'
@@ -29,6 +32,9 @@ export function Navbar() {
     .join('')
     .slice(0, 2)
     .toUpperCase()
+
+  const canTogglePresentationMode =
+    user?.role === 'developer' || user?.role === 'admin'
 
   async function handleLogout() {
     await logout()
@@ -80,6 +86,19 @@ export function Navbar() {
               <Settings />
               Settings
             </DropdownMenuItem>
+            {canTogglePresentationMode ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={isPresentationMode}
+                  onCheckedChange={togglePresentationMode}
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  <Presentation />
+                  Presentation mode
+                </DropdownMenuCheckboxItem>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
               <LogOut />

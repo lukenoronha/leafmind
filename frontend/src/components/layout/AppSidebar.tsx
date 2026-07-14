@@ -12,26 +12,45 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { Logo } from '@/components/common/Logo'
+import { Badge } from '@/components/ui/badge'
 import {
   filterNavItemsByRole,
+  filterNavItemsForPresentation,
   primaryNavItems,
   secondaryNavItems,
 } from '@/config/navigation'
 import { useAuth } from '@/hooks/use-auth'
+import { usePresentationMode } from '@/hooks/use-presentation-mode'
 
 export function AppSidebar() {
   const { user } = useAuth()
-  const visiblePrimaryItems = filterNavItemsByRole(primaryNavItems, user?.role)
+  const { isPresentationMode } = usePresentationMode()
+  const visiblePrimaryItems = filterNavItemsForPresentation(
+    filterNavItemsByRole(primaryNavItems, user?.role),
+    isPresentationMode,
+  )
+  const visibleSecondaryItems = filterNavItemsForPresentation(
+    secondaryNavItems,
+    isPresentationMode,
+  )
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <Logo
             className="group-data-[collapsible=icon]:[&>span]:hidden"
             imgClassName="size-7"
             wordmarkClassName="text-sidebar-foreground"
           />
+          {isPresentationMode ? (
+            <Badge
+              variant="secondary"
+              className="group-data-[collapsible=icon]:hidden"
+            >
+              Demo
+            </Badge>
+          ) : null}
         </div>
       </SidebarHeader>
 
@@ -63,7 +82,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          {secondaryNavItems.map((item) => (
+          {visibleSecondaryItems.map((item) => (
             <SidebarMenuItem key={item.to}>
               <SidebarMenuButton asChild tooltip={item.label}>
                 <NavLink

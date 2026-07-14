@@ -19,3 +19,21 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
+
+export type ApiErrorKind =
+  'network' | 'timeout' | 'server' | 'client' | 'unknown'
+
+/**
+ * Classifies an Axios error so callers (mainly the global response
+ * interceptor) can decide how loudly to surface it. A request that
+ * never reached the server (network down, CORS, DNS) has no
+ * `error.response`; a timeout has `error.code === 'ECONNABORTED'`.
+ */
+export function classifyApiError(error: unknown): ApiErrorKind {
+  if (!isAxiosError(error)) return 'unknown'
+  if (error.code === 'ECONNABORTED') return 'timeout'
+  if (!error.response) return 'network'
+  if (error.response.status >= 500) return 'server'
+  if (error.response.status >= 400) return 'client'
+  return 'unknown'
+}

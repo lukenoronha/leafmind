@@ -40,5 +40,15 @@ export default tseslint.config(
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    // The router config file intentionally mixes `lazy()` route
+    // definitions with a single `router` export — the recommended
+    // React Router code-splitting pattern — which the Fast Refresh
+    // heuristic can't distinguish from an actual component file.
+    files: ['src/routes/router.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
   prettierConfig,
 )

@@ -9,6 +9,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   history: '/history',
   savedReports: '/saved-reports',
+  chatHistory: '/chat-history',
   user: '/user',
   developer: '/developer',
   admin: '/admin',
