@@ -24,6 +24,17 @@ fi
 
 echo "[$(date -Iseconds)] New commits detected ($LOCAL -> $REMOTE), deploying..." >> "$LOG_FILE"
 git reset --hard "origin/$BRANCH" >> "$LOG_FILE" 2>&1
+
+# The frontend's node_modules lives in an anonymous volume that persists
+# across `docker compose up -d --build` — a plain rebuild does NOT rerun
+# `npm ci` against it, so a new/changed dependency silently 404s at runtime
+# until the volume is dropped. Only pay this cost when package files
+# actually changed between deploys.
+if git diff --name-only "$LOCAL" "$REMOTE" | grep -q '^frontend/package.*\.json$'; then
+  echo "[$(date -Iseconds)] frontend/package*.json changed — recreating frontend to refresh node_modules" >> "$LOG_FILE"
+  docker compose up -d --build --force-recreate -V frontend >> "$LOG_FILE" 2>&1
+fi
+
 docker compose up -d --build >> "$LOG_FILE" 2>&1
 docker compose restart nginx >> "$LOG_FILE" 2>&1
 echo "[$(date -Iseconds)] Deploy complete." >> "$LOG_FILE"
