@@ -13,7 +13,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    allowedHosts: ['leafmind.local'],
+    allowedHosts: ['leafmind.local', '.trycloudflare.com', '.ngrok-free.app', '.ngrok-free.dev'],
   },
   build: {
     rolldownOptions: {

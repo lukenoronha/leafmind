@@ -21,11 +21,12 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://leafmind:leafmind@postgres:5432/leafmind
-      CORS_ORIGINS: http://leafmind.local,http://localhost:5173
+      CORS_ORIGINS: http://leafmind.local,http://localhost:5173,https://*.trycloudflare.com,https://*.ngrok-free.app
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./datasets:/datasets:ro
       - backend_uploads:/app/uploads
       - backend_documents:/app/documents
       - backend_chroma:/app/chroma_data
@@ -38,7 +39,7 @@ services:
   frontend:
     build: ./frontend
     environment:
-      VITE_API_BASE_URL: http://leafmind.local/api/v1
+      VITE_API_BASE_URL: /api/v1
       VITE_APP_NAME: LeafMind
       VITE_APP_ENV: development
     ports:
@@ -58,6 +59,16 @@ services:
     depends_on:
       - backend
       - frontend
+
+  tunnel:
+    image: ngrok/ngrok:latest
+    command: http nginx:80
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - nginx
 
 volumes:
   postgres_data:

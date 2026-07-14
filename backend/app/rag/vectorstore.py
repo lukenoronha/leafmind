@@ -69,8 +69,9 @@ class ChromaVectorStore:
     interface.
     """
 
-    def __init__(self, settings: Settings | None = None):
+    def __init__(self, settings: Settings | None = None, *, collection_name: str | None = None):
         self._settings = settings or get_settings()
+        self._collection_name = collection_name or self._settings.CHROMADB_COLLECTION_NAME
         self._client = None
         self._collection = None
         self._lock = threading.Lock()
@@ -102,7 +103,7 @@ class ChromaVectorStore:
             try:
                 self._client = chromadb.PersistentClient(path=self._settings.CHROMADB_PERSIST_DIR)
                 self._collection = self._client.get_or_create_collection(
-                    name=self._settings.CHROMADB_COLLECTION_NAME,
+                    name=self._collection_name,
                     metadata={"hnsw:space": "cosine"},
                 )
             except Exception as exc:
@@ -110,7 +111,7 @@ class ChromaVectorStore:
 
             logger.info(
                 "ChromaDB collection '{}' ready at '{}'",
-                self._settings.CHROMADB_COLLECTION_NAME,
+                self._collection_name,
                 self._settings.CHROMADB_PERSIST_DIR,
             )
 
@@ -181,9 +182,9 @@ class ChromaVectorStore:
         """
         self._ensure_loaded()
         try:
-            self._client.delete_collection(name=self._settings.CHROMADB_COLLECTION_NAME)
+            self._client.delete_collection(name=self._collection_name)
             self._collection = self._client.get_or_create_collection(
-                name=self._settings.CHROMADB_COLLECTION_NAME,
+                name=self._collection_name,
                 metadata={"hnsw:space": "cosine"},
             )
         except Exception as exc:
@@ -215,3 +216,26 @@ def get_vector_store() -> ChromaVectorStore:
             if _store_instance is None:
                 _store_instance = ChromaVectorStore(get_settings())
     return _store_instance
+
+
+_image_store_lock = threading.Lock()
+_image_store_instance: ChromaVectorStore | None = None
+
+
+def get_image_vector_store() -> ChromaVectorStore:
+    """Process-wide lazy singleton for the CLIP reference-image collection.
+
+    A separate collection (`Settings.CLIP_COLLECTION_NAME`) from
+    `get_vector_store()`'s text-chunk collection — same persistent Chroma
+    client/on-disk store, different embedding space (CLIP image vectors vs.
+    sentence-transformers text vectors), so they must not share a collection.
+    """
+    global _image_store_instance
+    if _image_store_instance is None:
+        with _image_store_lock:
+            if _image_store_instance is None:
+                settings = get_settings()
+                _image_store_instance = ChromaVectorStore(
+                    settings, collection_name=settings.CLIP_COLLECTION_NAME
+                )
+    return _image_store_instance

@@ -156,6 +156,14 @@ class Settings(BaseSettings):
     VLM_TOP_K_CANDIDATES: int = 3
     VLM_LOAD_ON_STARTUP: bool = False
 
+    # --- CLIP few-shot image retrieval (grounds classification in labeled reference images) ---
+    CLIP_MODEL_NAME: str = "openai/clip-vit-base-patch32"
+    CLIP_DEVICE: str = "auto"
+    CLIP_LOAD_ON_STARTUP: bool = False
+    CLIP_COLLECTION_NAME: str = "leafmind_reference_images"
+    CLIP_FEW_SHOT_TOP_K: int = 3
+    CLIP_FEW_SHOT_SIMILARITY_THRESHOLD: float = 0.6
+
     # --- Chat (VLM-only, pre-RAG) ---
     CHAT_MAX_HISTORY_MESSAGES: int = 10
     CHAT_MAX_NEW_TOKENS: int = 400

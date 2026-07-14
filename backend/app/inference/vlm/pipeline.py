@@ -17,6 +17,7 @@ from loguru import logger
 from app.inference.vlm.backend import VLMBackend, VLMBackendError, get_vlm_backend
 from app.inference.vlm.prompts import build_chat_messages, build_classification_messages
 from app.inference.vlm.schemas import ChatTurn, ClassificationCandidate, ClassificationResult
+from app.rag.image_retriever import ImageRetriever
 
 
 class InferenceError(Exception):
@@ -31,13 +32,35 @@ class VLMInferencePipeline:
     touching model-loading code at all.
     """
 
-    def __init__(self, backend: VLMBackend | None = None, *, max_new_tokens: int = 512):
+    def __init__(
+        self,
+        backend: VLMBackend | None = None,
+        *,
+        max_new_tokens: int = 512,
+        image_retriever: ImageRetriever | None = None,
+    ):
         self._backend = backend or get_vlm_backend()
         self._default_max_new_tokens = max_new_tokens
+        self._image_retriever = image_retriever or ImageRetriever()
 
     def classify(self, pil_image, *, candidate_labels: list[str], top_k: int = 3) -> ClassificationResult:
+        few_shot_examples: list[tuple[object, str]] = []
+        try:
+            for match in self._image_retriever.retrieve(pil_image):
+                if not match.image_path:
+                    continue
+                from PIL import Image
+
+                few_shot_examples.append((Image.open(match.image_path).convert("RGB"), match.label))
+        except Exception as exc:
+            logger.warning("CLIP few-shot retrieval unavailable, falling back to zero-shot: {}", exc)
+            few_shot_examples = []
+
         messages = build_classification_messages(
-            pil_image=pil_image, candidate_labels=candidate_labels, top_k=top_k
+            pil_image=pil_image,
+            candidate_labels=candidate_labels,
+            top_k=top_k,
+            few_shot_examples=few_shot_examples,
         )
 
         start = time.perf_counter()
