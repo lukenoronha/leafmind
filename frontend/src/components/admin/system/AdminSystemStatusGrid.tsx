@@ -13,39 +13,72 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 import { useAdminSystemStatus } from '@/hooks/use-admin-system-status'
-import type { SystemComponentStatus } from '@/types/developer'
+import type { AdminSystemStatus } from '@/types/admin'
 import { cn } from '@/lib/utils'
 
-const ICON_BY_ID: Record<string, LucideIcon> = {
-  backend: Server,
-  database: Database,
-  chromadb: Layers,
-  model: Cpu,
-  'api-uptime': Gauge,
-  memory: MemoryStick,
-  disk: HardDrive,
+interface ComponentDef {
+  id: string
+  name: string
+  icon: LucideIcon
+  healthy: (status: AdminSystemStatus) => boolean
+  detail: (status: AdminSystemStatus) => string
 }
 
-const STATUS_LABEL: Record<SystemComponentStatus, string> = {
-  operational: 'Operational',
-  degraded: 'Degraded',
-  down: 'Down',
-}
-
-const STATUS_DOT: Record<SystemComponentStatus, string> = {
-  operational: 'bg-success',
-  degraded: 'bg-warning',
-  down: 'bg-destructive',
-}
-
-const STATUS_BADGE_VARIANT: Record<
-  SystemComponentStatus,
-  'default' | 'secondary' | 'destructive'
-> = {
-  operational: 'default',
-  degraded: 'secondary',
-  down: 'destructive',
-}
+const COMPONENTS: ComponentDef[] = [
+  {
+    id: 'backend',
+    name: 'Backend',
+    icon: Server,
+    healthy: (s) => s.backendHealthy,
+    detail: (s) => `Uptime ${Math.round(s.uptimeSeconds / 60)}m`,
+  },
+  {
+    id: 'database',
+    name: 'Database',
+    icon: Database,
+    healthy: (s) => s.databaseHealthy,
+    detail: (s) => (s.databaseHealthy ? 'Connected' : 'Unreachable'),
+  },
+  {
+    id: 'chromadb',
+    name: 'ChromaDB',
+    icon: Layers,
+    healthy: (s) => s.chromadbHealthy,
+    detail: (s) => (s.chromadbHealthy ? 'Connected' : 'Unreachable'),
+  },
+  {
+    id: 'model',
+    name: 'Models',
+    icon: Cpu,
+    healthy: (s) => s.vlmModelLoaded && s.embeddingModelLoaded,
+    detail: (s) =>
+      `VLM ${s.vlmModelLoaded ? 'loaded' : 'not loaded'}, embeddings ${
+        s.embeddingModelLoaded ? 'loaded' : 'not loaded'
+      }`,
+  },
+  {
+    id: 'api-latency',
+    name: 'API latency',
+    icon: Gauge,
+    healthy: (s) => s.avgRequestLatencyMs < 1000,
+    detail: (s) =>
+      `avg ${Math.round(s.avgRequestLatencyMs)}ms / p95 ${Math.round(s.p95RequestLatencyMs)}ms`,
+  },
+  {
+    id: 'memory',
+    name: 'Memory',
+    icon: MemoryStick,
+    healthy: (s) => s.memoryPercent < 90,
+    detail: (s) => `${Math.round(s.memoryPercent)}% used`,
+  },
+  {
+    id: 'disk',
+    name: 'Disk',
+    icon: HardDrive,
+    healthy: (s) => s.diskPercent < 90,
+    detail: (s) => `${Math.round(s.diskPercent)}% used`,
+  },
+]
 
 export function AdminSystemStatusGrid() {
   const { data, isLoading, isError, refetch } = useAdminSystemStatus()
@@ -60,7 +93,7 @@ export function AdminSystemStatusGrid() {
     )
   }
 
-  if (isError) {
+  if (isError || !data) {
     return (
       <ErrorState
         title="Unable to load system status"
@@ -72,14 +105,14 @@ export function AdminSystemStatusGrid() {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {data?.map((component) => {
-        const Icon = ICON_BY_ID[component.id] ?? Server
+      {COMPONENTS.map((component) => {
+        const healthy = component.healthy(data)
         return (
           <Card key={component.id}>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Icon className="text-muted-foreground size-4" />
+                  <component.icon className="text-muted-foreground size-4" />
                   <p className="text-foreground text-sm font-medium">
                     {component.name}
                   </p>
@@ -87,16 +120,16 @@ export function AdminSystemStatusGrid() {
                 <span
                   className={cn(
                     'size-2 rounded-full',
-                    STATUS_DOT[component.status],
+                    healthy ? 'bg-success' : 'bg-destructive',
                   )}
                   aria-hidden
                 />
               </div>
-              <Badge variant={STATUS_BADGE_VARIANT[component.status]}>
-                {STATUS_LABEL[component.status]}
+              <Badge variant={healthy ? 'default' : 'destructive'}>
+                {healthy ? 'Operational' : 'Degraded'}
               </Badge>
               <p className="text-muted-foreground text-xs">
-                {component.detail}
+                {component.detail(data)}
               </p>
             </CardContent>
           </Card>

@@ -36,13 +36,15 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null
 
   if (!refreshPromise) {
+    // Body/response fields are snake_case to match the backend's
+    // RefreshRequest/TokenResponse schemas exactly (backend/app/schemas/auth.py).
     refreshPromise = refreshClient
-      .post<{ accessToken: string; refreshToken?: string }>('/auth/refresh', {
-        refreshToken,
+      .post<{ access_token: string; refresh_token?: string }>('/auth/refresh', {
+        refresh_token: refreshToken,
       })
       .then(({ data }) => {
-        tokenStorage.setTokens(data.accessToken, data.refreshToken)
-        return data.accessToken
+        tokenStorage.setTokens(data.access_token, data.refresh_token)
+        return data.access_token
       })
       .catch(() => null)
       .finally(() => {

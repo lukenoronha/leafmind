@@ -48,7 +48,7 @@ export function exportChatAsMarkdown(
       lines.push('**Sources:**')
       for (const source of message.sources) {
         lines.push(
-          `- ${source.documentTitle}, ${source.chapter} (p. ${source.pageNumber}) — ${Math.round(source.retrievalConfidence * 100)}% match`,
+          `- ${source.documentName}${source.chapter ? `, ${source.chapter}` : ''}${source.pageNumber !== null ? ` (p. ${source.pageNumber})` : ''} — ${Math.round(source.score * 100)}% match`,
         )
       }
     }

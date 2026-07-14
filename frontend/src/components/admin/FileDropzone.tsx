@@ -9,6 +9,8 @@ interface FileDropzoneProps {
   isUploading?: boolean
   progress?: number
   onFileSelected: (file: File) => void
+  onFilesSelected?: (files: File[]) => void
+  multiple?: boolean
   className?: string
 }
 
@@ -18,6 +20,8 @@ export function FileDropzone({
   isUploading = false,
   progress = 0,
   onFileSelected,
+  onFilesSelected,
+  multiple = false,
   className,
 }: FileDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -25,11 +29,14 @@ export function FileDropzone({
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
-      const file = files?.[0]
-      if (!file) return
-      onFileSelected(file)
+      if (!files || files.length === 0) return
+      if (multiple && onFilesSelected) {
+        onFilesSelected(Array.from(files))
+        return
+      }
+      onFileSelected(files[0])
     },
-    [onFileSelected],
+    [onFileSelected, onFilesSelected, multiple],
   )
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -86,6 +93,7 @@ export function FileDropzone({
         ref={inputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         className="hidden"
         onChange={(event) => handleFiles(event.target.files)}
       />

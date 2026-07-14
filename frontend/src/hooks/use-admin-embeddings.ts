@@ -8,10 +8,7 @@ const EMBEDDINGS_QUERY_KEY = ['admin', 'embeddings', 'stats'] as const
 export function useEmbeddingStats() {
   return useQuery({
     queryKey: EMBEDDINGS_QUERY_KEY,
-    queryFn: async () => {
-      const { data } = await adminService.getEmbeddingStats()
-      return data
-    },
+    queryFn: () => adminService.getEmbeddingStats(),
   })
 }
 

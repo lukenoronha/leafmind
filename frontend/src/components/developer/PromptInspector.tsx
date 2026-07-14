@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Markdown from 'react-markdown'
-import { FileSearch, Leaf, MessageSquareText } from 'lucide-react'
+import { FileSearch, Leaf, MessageSquareText, Search } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -8,18 +8,25 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConfidenceBadge } from '@/components/analysis/ConfidenceBadge'
-import { usePromptInspectorEntries } from '@/hooks/use-developer-dashboard'
-import { cn } from '@/lib/utils'
+import { usePromptInspectorEntry } from '@/hooks/use-developer-dashboard'
 
+/**
+ * The backend can only inspect one chat turn at a time, by its assistant
+ * ChatMessage ID (GET /developer/chat-messages/{id}/prompt-inspector) —
+ * there is no bulk listing endpoint, so this looks up a single ID rather
+ * than browsing a list. Find a chat message ID via the chat history page.
+ */
 export function PromptInspector() {
-  const { data, isLoading, isError, refetch } = usePromptInspectorEntries()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-
-  const selected = data?.find((entry) => entry.id === selectedId) ?? data?.[0]
+  const [inputValue, setInputValue] = useState('')
+  const [chatMessageId, setChatMessageId] = useState<string | null>(null)
+  const { data: selected, isLoading, isError, refetch } =
+    usePromptInspectorEntry(chatMessageId)
 
   return (
     <Card>
@@ -27,118 +34,103 @@ export function PromptInspector() {
         <CardTitle>Prompt inspector</CardTitle>
         <CardDescription>
           Inspect the question, prediction, retrieved context, and generated
-          response behind any chat exchange.
+          response behind a chat exchange, by its chat message ID.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {isLoading ? (
+      <CardContent className="space-y-4">
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            setChatMessageId(inputValue.trim() || null)
+          }}
+        >
+          <Input
+            placeholder="Chat message ID..."
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            className="flex-1"
+          />
+          <Button type="submit">
+            <Search />
+            Inspect
+          </Button>
+        </form>
+
+        {!chatMessageId ? (
+          <EmptyState
+            icon={FileSearch}
+            title="No message selected"
+            description="Paste a chat message ID above to inspect the prompt behind it."
+          />
+        ) : isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }, (_, index) => (
               <Skeleton key={index} className="h-14 w-full rounded-lg" />
             ))}
           </div>
-        ) : isError ? (
+        ) : isError || !selected ? (
           <ErrorState
-            title="Unable to load prompts"
-            description="We couldn't reach the prompt inspector endpoint."
+            title="Unable to load this message"
+            description="Check the ID and try again."
             onRetry={() => void refetch()}
           />
-        ) : !data || data.length === 0 ? (
-          <EmptyState
-            icon={FileSearch}
-            title="No exchanges yet"
-            description="Prompt/response pairs will appear here once users start chatting."
-          />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-            <ul className="max-h-[28rem] space-y-1.5 overflow-y-auto pr-1">
-              {data.map((entry) => (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(entry.id)}
-                    className={cn(
-                      'w-full rounded-lg border p-3 text-left text-sm transition-colors',
-                      (selected?.id ?? data[0]?.id) === entry.id
-                        ? 'border-primary bg-accent'
-                        : 'hover:bg-muted/50',
-                    )}
-                  >
-                    <p className="text-foreground line-clamp-2 font-medium">
-                      {entry.question}
-                    </p>
-                    <p className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                      <Leaf className="size-3" />
-                      {entry.predictedPlant}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-1">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                <MessageSquareText className="size-3.5" />
+                Question
+              </p>
+              <p className="text-foreground text-sm">{selected.question}</p>
+            </div>
 
-            {selected ? (
-              <div className="space-y-4 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-                    <MessageSquareText className="size-3.5" />
-                    Question
-                  </p>
-                  <p className="text-foreground text-sm">{selected.question}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-                    <Leaf className="size-3.5" />
-                    Predicted plant
-                  </p>
-                  <p className="text-foreground text-sm font-medium">
-                    {selected.predictedPlant}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                    Retrieved context ({selected.retrievedContext.length})
-                  </p>
-                  <div className="space-y-1.5">
-                    {selected.retrievedContext.map((source) => (
-                      <div
-                        key={source.id}
-                        className="bg-muted/50 flex items-start justify-between gap-3 rounded-md p-2 text-xs"
-                      >
-                        <div className="min-w-0 space-y-0.5">
-                          <p className="text-foreground truncate font-medium">
-                            {source.documentTitle}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {source.chapter} &middot; Page {source.pageNumber}
-                          </p>
-                        </div>
-                        <ConfidenceBadge
-                          value={source.retrievalConfidence}
-                          className="shrink-0"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                      Generated response
-                    </p>
-                    <ConfidenceBadge
-                      value={selected.responseConfidence}
-                      label="Confidence"
-                    />
-                  </div>
-                  <div className="prose prose-sm dark:prose-invert bg-muted/50 max-w-none rounded-md p-3">
-                    <Markdown>{selected.generatedResponse}</Markdown>
-                  </div>
-                </div>
+            {selected.predictedPlant ? (
+              <div className="space-y-1">
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
+                  <Leaf className="size-3.5" />
+                  Predicted plant
+                </p>
+                <p className="text-foreground text-sm font-medium">
+                  {selected.predictedPlant}
+                </p>
               </div>
             ) : null}
+
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Retrieved context ({selected.retrievedContext.length})
+              </p>
+              <div className="space-y-1.5">
+                {selected.retrievedContext.map((source) => (
+                  <div
+                    key={source.chunkId}
+                    className="bg-muted/50 flex items-start justify-between gap-3 rounded-md p-2 text-xs"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="text-foreground truncate font-medium">
+                        {source.documentName}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {source.chapter}
+                        {source.chapter && source.pageNumber !== null ? ' · ' : ''}
+                        {source.pageNumber !== null ? `Page ${source.pageNumber}` : ''}
+                      </p>
+                    </div>
+                    <ConfidenceBadge value={source.score} className="shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Generated response
+              </p>
+              <div className="prose prose-sm dark:prose-invert bg-muted/50 max-w-none rounded-md p-3">
+                <Markdown>{selected.generatedResponse}</Markdown>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

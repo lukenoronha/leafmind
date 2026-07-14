@@ -56,7 +56,7 @@ export function LogsViewer() {
     return data.filter(
       (log) =>
         log.message.toLowerCase().includes(query) ||
-        log.source.toLowerCase().includes(query),
+        log.module.toLowerCase().includes(query),
     )
   }, [data, search])
 
@@ -113,9 +113,9 @@ export function LogsViewer() {
           />
         ) : (
           <div className="bg-muted/20 max-h-96 space-y-1 overflow-y-auto rounded-lg border p-2 font-mono text-xs">
-            {filteredLogs.map((log) => (
+            {filteredLogs.map((log, index) => (
               <div
-                key={log.id}
+                key={`${log.timestamp}-${index}`}
                 className={cn(
                   'flex flex-wrap items-start gap-2 rounded-md px-2 py-1.5',
                   log.level === 'error' && 'bg-destructive/5',
@@ -131,7 +131,7 @@ export function LogsViewer() {
                   {log.level}
                 </Badge>
                 <span className="text-muted-foreground shrink-0 font-medium">
-                  {log.source}
+                  {log.module}
                 </span>
                 <span className="text-foreground min-w-0 flex-1 break-words">
                   {log.message}

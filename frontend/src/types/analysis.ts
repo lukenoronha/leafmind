@@ -1,45 +1,61 @@
 export interface UploadedImage {
   id: string
-  url: string
+  originalFilename: string
+  contentType: string
+  sizeBytes: number
+  createdAt: string
+}
+
+export interface PredictionCandidate {
+  label: string
+  confidence: number
+  reasoning: string
 }
 
 export interface Prediction {
   id: string
   imageId: string
   plantName: string
-  scientificName: string
   confidence: number
+  candidates: PredictionCandidate[]
   modelVersion: string
+  preprocessingMs: number
+  inferenceMs: number
   predictedAt: string
 }
 
-export interface HealthReport {
+/**
+ * Grounded knowledge-base excerpt backing a prediction's "related knowledge"
+ * section (see GET /reports/prediction/{id}). Deliberately not a fixed
+ * medicinal-fact schema (family/native region/etc.) — the backend never
+ * fabricates that content; it only surfaces real retrieved document
+ * excerpts, or none at all if nothing relevant is indexed.
+ */
+export interface RelatedKnowledgeChunk {
+  documentName: string
+  pageNumber: number | null
+  chapter: string | null
+  score: number
+  text: string
+}
+
+export interface PredictionReport {
   predictionId: string
-  summary: string
-  family: string
-  nativeRegion: string
-  medicinalUses: string[]
-  activeCompounds: string[]
-  toxicityNotes: string
-  growthHabit: string
+  disclaimer: string
+  knowledgeAvailable: boolean
+  relatedKnowledge: RelatedKnowledgeChunk[]
 }
 
 export type ChatRole = 'user' | 'assistant'
 
-/**
- * Stages of the RAG pipeline, surfaced to the user while an assistant
- * response is being generated.
- */
-export type RetrievalStage =
-  'searching' | 'retrieved' | 'generating' | 'done' | 'error'
-
 export interface Source {
-  id: string
-  documentTitle: string
-  chapter: string
-  pageNumber: number
-  retrievalConfidence: number
-  excerpt?: string
+  chunkId: string
+  documentId: string
+  documentName: string
+  pageNumber: number | null
+  chapter: string | null
+  score: number
+  text: string
 }
 
 export interface ChatMessage {
@@ -49,16 +65,37 @@ export interface ChatMessage {
   createdAt: string
   /** Retrieved documents backing this assistant message, if any. */
   sources?: Source[]
-  /** Model's confidence in the generated response, 0-1. */
-  responseConfidence?: number
-  /** True while an assistant message is still receiving streamed tokens. */
-  isStreaming?: boolean
+  /** True while a request for this message is in flight (no token streaming — the
+   * backend returns the full answer in one response). */
+  isPending?: boolean
 }
 
+export interface HistoryItem {
+  predictionId: string
+  imageId: string
+  originalFilename: string
+  predictedLabel: string
+  confidence: number
+  modelVersion: string
+  createdAt: string
+}
+
+/**
+ * One row in History/Saved Reports. `saved` is always `false` — the backend
+ * has no "save a report" concept (no flag, no endpoint), so this can never
+ * be `true` until that backend feature exists. Kept (rather than removed)
+ * so the existing History/Saved Reports UI keeps working off real data.
+ * `image` has no URL — the backend has no endpoint that serves uploaded
+ * image bytes back by ID, only a `GET /history` metadata listing.
+ */
 export interface AnalysisSession {
   id: string
-  image: UploadedImage
-  prediction: Prediction
+  image: { id: string; originalFilename: string }
+  prediction: {
+    id: string
+    plantName: string
+    confidence: number
+  }
   createdAt: string
   saved: boolean
 }

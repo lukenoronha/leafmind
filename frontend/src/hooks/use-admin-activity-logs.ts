@@ -7,17 +7,14 @@ import type { ActivityLogFilters } from '@/types/admin'
 export function useActivityLogs(filters: ActivityLogFilters) {
   return useQuery({
     queryKey: ['admin', 'activity-logs', filters],
-    queryFn: async () => {
-      const { data } = await adminService.getActivityLogs(filters)
-      return data
-    },
+    queryFn: () => adminService.getActivityLogs(filters),
     placeholderData: (previousData) => previousData,
   })
 }
 
 export function useExportActivityLogs() {
   return useMutation({
-    mutationFn: (filters: Omit<ActivityLogFilters, 'page' | 'pageSize'>) =>
+    mutationFn: (filters: Omit<ActivityLogFilters, 'limit' | 'offset'>) =>
       adminService.exportActivityLogs(filters),
     onSuccess: ({ data }) => {
       const url = URL.createObjectURL(data)

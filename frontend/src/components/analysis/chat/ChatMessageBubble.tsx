@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import Markdown from 'react-markdown'
 import { Bot, Check, Copy, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ConfidenceBadge } from '@/components/analysis/ConfidenceBadge'
 import { SourcesPanel } from '@/components/analysis/chat/SourcesPanel'
 import { CITATION_HREF_PREFIX, linkifyCitations } from '@/lib/citations'
 import type { ChatMessage } from '@/types/analysis'
@@ -91,12 +90,6 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
               {content}
             </Markdown>
           </div>
-          {message.isStreaming ? (
-            <span
-              className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse bg-current align-middle"
-              aria-hidden
-            />
-          ) : null}
         </div>
 
         {!isUser && message.sources && message.sources.length > 0 ? (
@@ -109,29 +102,20 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
         ) : null}
 
         <div className="flex items-center gap-2">
-          {!isUser && !message.isStreaming && message.responseConfidence ? (
-            <ConfidenceBadge
-              value={message.responseConfidence}
-              label="Response confidence"
-            />
-          ) : null}
-
-          {!message.isStreaming ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-6 opacity-0 transition-opacity group-hover:opacity-100"
-              onClick={handleCopy}
-              aria-label="Copy message"
-            >
-              {copied ? (
-                <Check className="text-success size-3.5" />
-              ) : (
-                <Copy className="size-3.5" />
-              )}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 opacity-0 transition-opacity group-hover:opacity-100"
+            onClick={handleCopy}
+            aria-label="Copy message"
+          >
+            {copied ? (
+              <Check className="text-success size-3.5" />
+            ) : (
+              <Copy className="size-3.5" />
+            )}
+          </Button>
         </div>
       </div>
     </div>

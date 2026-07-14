@@ -6,10 +6,7 @@ const REFRESH_INTERVAL_MS = 30_000
 export function useAdminSystemStatus() {
   return useQuery({
     queryKey: ['admin', 'system', 'status'],
-    queryFn: async () => {
-      const { data } = await adminService.getSystemStatus()
-      return data
-    },
+    queryFn: () => adminService.getSystemStatus(),
     refetchInterval: REFRESH_INTERVAL_MS,
   })
 }

@@ -9,6 +9,7 @@ export function usePredict() {
     mutationFn: (payload: PredictPayload) => analysisService.predict(payload),
   })
 
+
   return {
     predict: mutation.mutateAsync,
     isPredicting: mutation.isPending,

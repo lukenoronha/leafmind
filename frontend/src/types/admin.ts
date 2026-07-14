@@ -1,5 +1,4 @@
 import type { UserRole } from '@/types/auth'
-import type { SystemComponentStatus } from '@/types/developer'
 
 export type AccountStatus = 'active' | 'inactive'
 
@@ -9,100 +8,101 @@ export interface AdminUser {
   email: string
   role: UserRole
   status: AccountStatus
-  avatarUrl?: string
   joinedAt: string
-  lastActiveAt: string
-  analysisCount: number
 }
 
 export interface UserFilters {
-  search?: string
   role?: UserRole
   status?: AccountStatus
 }
 
-export type DatasetStatus = 'ready' | 'processing' | 'error'
-
-export interface Dataset {
-  id: string
-  name: string
-  description: string
-  status: DatasetStatus
-  imageCount: number
-  classCount: number
-  sizeBytes: number
-  version: string
-  updatedAt: string
+/** One dataset "class" (species) in the medicinal-leaf image classifier's
+ * training data — the real backend has no separate "dataset" concept
+ * beyond this per-class folder of labeled images. */
+export interface DatasetClass {
+  classId: number
+  trainingLabel: string | null
+  folderName: string
+  status: string
+  displayName: string
+  isVerified: boolean
 }
 
-export type DocumentIndexStatus = 'indexed' | 'indexing' | 'failed' | 'queued'
+export interface DatasetStatistics {
+  totalClasses: number
+  verifiedClasses: number
+  rawDirExists: boolean
+  rawDir: string
+}
+
+export type DocumentIndexStatus = 'indexed' | 'processing' | 'failed'
 
 export interface KnowledgeDocument {
   id: string
-  title: string
   fileName: string
   sizeBytes: number
-  pageCount: number
   indexStatus: DocumentIndexStatus
+  statusMessage: string | null
+  pageCount: number | null
   chunkCount: number
   uploadedAt: string
-  uploadedBy: string
-  previewUrl: string
 }
 
 export interface EmbeddingStats {
   collectionName: string
-  embeddingModel: string
   vectorCount: number
-  dimensions: number
-  storageUsedBytes: number
-  lastRebuiltAt: string
-}
-
-export type SettingFieldType = 'text' | 'number' | 'boolean' | 'select'
-
-export interface AppSettingOption {
-  label: string
-  value: string
+  persistDir: string
+  distanceMetric: string
 }
 
 export interface AppSetting {
   key: string
-  label: string
   description: string
-  type: SettingFieldType
   value: string | number | boolean
-  options?: AppSettingOption[]
-  category: string
+  defaultValue: string | number | boolean
+  isOverridden: boolean
+  updatedBy: string | null
+  updatedAt: string | null
 }
 
 export interface ActivityLogEntry {
   id: string
-  actor: string
+  actorEmail: string
   action: string
-  target: string
-  details: string
-  timestamp: string
+  targetType: string | null
+  targetId: string | null
+  details: Record<string, unknown> | null
+  createdAt: string
 }
 
 export interface ActivityLogFilters {
-  search?: string
+  actorEmail?: string
   action?: string
-  page: number
-  pageSize: number
+  limit?: number
+  offset?: number
 }
 
 export interface PaginatedResult<T> {
   items: T[]
   total: number
-  page: number
-  pageSize: number
+  limit: number
+  offset: number
 }
 
-export interface AdminSystemComponent {
-  id: string
-  name: string
-  status: SystemComponentStatus
-  detail: string
-  lastCheckedAt: string
+export interface AdminSystemStatus {
+  backendHealthy: boolean
+  uptimeSeconds: number
+  databaseHealthy: boolean
+  chromadbHealthy: boolean
+  vlmModelLoaded: boolean
+  embeddingModelLoaded: boolean
+  cpuPercent: number
+  memoryTotalMb: number
+  memoryUsedMb: number
+  memoryPercent: number
+  diskTotalGb: number
+  diskUsedGb: number
+  diskPercent: number
+  avgRequestLatencyMs: number
+  p95RequestLatencyMs: number
 }

@@ -6,14 +6,25 @@ import type { AccountStatus, UserFilters } from '@/types/admin'
 
 const USERS_QUERY_KEY = ['admin', 'users'] as const
 
-export function useAdminUsers(filters: UserFilters) {
-  return useQuery({
-    queryKey: [...USERS_QUERY_KEY, filters],
-    queryFn: async () => {
-      const { data } = await adminService.getUsers(filters)
-      return data
-    },
+export function useAdminUsers(filters: UserFilters & { search?: string }) {
+  const { search, ...serverFilters } = filters
+  const query = useQuery({
+    queryKey: [...USERS_QUERY_KEY, serverFilters],
+    queryFn: () => adminService.getUsers(serverFilters),
   })
+
+  // The backend has no free-text search param (only role/is_active) — filter
+  // the already-fetched, server-filtered page client-side instead of
+  // silently dropping the search box.
+  const filtered = search?.trim()
+    ? query.data?.filter(
+        (user) =>
+          user.name.toLowerCase().includes(search.trim().toLowerCase()) ||
+          user.email.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : query.data
+
+  return { ...query, data: filtered }
 }
 
 export function useSetUserStatus() {

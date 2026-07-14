@@ -56,8 +56,6 @@ export function PredictionAnalyticsPanel() {
               <TableRow>
                 <TableHead>Plant</TableHead>
                 <TableHead>Confidence</TableHead>
-                <TableHead>Latency</TableHead>
-                <TableHead>Processing time</TableHead>
                 <TableHead>Model version</TableHead>
                 <TableHead>Predicted</TableHead>
               </TableRow>
@@ -70,12 +68,6 @@ export function PredictionAnalyticsPanel() {
                   </TableCell>
                   <TableCell>
                     <ConfidenceBadge value={entry.confidence} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {entry.latencyMs}ms
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {entry.processingTimeMs}ms
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {entry.modelVersion}

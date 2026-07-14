@@ -1,4 +1,3 @@
-import { Check, Loader2, X } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -8,98 +7,80 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
-import { usePipelineStages } from '@/hooks/use-developer-dashboard'
-import type { PipelineStage, PipelineStageStatus } from '@/types/developer'
-import { cn } from '@/lib/utils'
+import { useAverageTimings } from '@/hooks/use-developer-dashboard'
+import type { AverageTimings } from '@/types/developer'
 
-const STATUS_STYLES: Record<PipelineStageStatus, string> = {
-  pending: 'border-border bg-muted text-muted-foreground',
-  running: 'border-primary bg-primary/10 text-primary',
-  complete: 'border-success bg-success/10 text-success',
-  error: 'border-destructive bg-destructive/10 text-destructive',
+interface StageDef {
+  id: string
+  label: string
+  averageMs: (timings: AverageTimings) => number | null
 }
 
-function StageIcon({ status }: { status: PipelineStageStatus }) {
-  if (status === 'running') return <Loader2 className="size-4 animate-spin" />
-  if (status === 'complete') return <Check className="size-4" />
-  if (status === 'error') return <X className="size-4" />
-  return <span className="size-2 rounded-full bg-current" />
-}
+// Static description of the real pipeline stages — the backend has no
+// live "request in progress" concept to report, only averages aggregated
+// across all persisted predictions/chat turns (GET /developer/metrics/timings).
+const STAGES: StageDef[] = [
+  {
+    id: 'preprocessing',
+    label: 'Preprocessing',
+    averageMs: (t) => t.avgPreprocessingMs,
+  },
+  {
+    id: 'inference',
+    label: 'Inference',
+    averageMs: (t) => t.avgPredictionInferenceMs,
+  },
+  {
+    id: 'retrieval',
+    label: 'Retrieval',
+    averageMs: (t) => t.avgRetrievalMs,
+  },
+  {
+    id: 'generation',
+    label: 'Response generation',
+    averageMs: (t) => t.avgChatInferenceMs,
+  },
+]
 
-function formatDuration(ms?: number) {
-  if (ms === undefined) return null
-  if (ms < 1000) return `${ms}ms`
+function formatDuration(ms: number | null) {
+  if (ms === null) return '—'
+  if (ms < 1000) return `${Math.round(ms)}ms`
   return `${(ms / 1000).toFixed(2)}s`
 }
 
-function PipelineStep({
-  stage,
-  isLast,
-}: {
-  stage: PipelineStage
-  isLast: boolean
-}) {
-  return (
-    <div className="flex flex-1 items-center">
-      <div className="flex min-w-0 flex-col items-center gap-2 text-center">
-        <div
-          className={cn(
-            'flex size-9 shrink-0 items-center justify-center rounded-full border-2',
-            STATUS_STYLES[stage.status],
-          )}
-        >
-          <StageIcon status={stage.status} />
-        </div>
-        <div className="space-y-0.5">
-          <p className="text-foreground text-xs font-medium">{stage.label}</p>
-          {stage.durationMs !== undefined ? (
-            <p className="text-muted-foreground text-xs">
-              {formatDuration(stage.durationMs)}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      {!isLast ? (
-        <div
-          className={cn(
-            'mx-1 h-0.5 flex-1 rounded-full',
-            stage.status === 'complete' ? 'bg-success' : 'bg-border',
-          )}
-        />
-      ) : null}
-    </div>
-  )
-}
-
 export function PipelineVisualizer() {
-  const { data, isLoading, isError, refetch } = usePipelineStages()
+  const { data, isLoading, isError, refetch } = useAverageTimings()
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>AI pipeline</CardTitle>
         <CardDescription>
-          Every stage a request passes through, from image upload to generated
-          response.
+          Average time spent in each stage, aggregated across all persisted
+          predictions and chat turns.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-20 w-full rounded-lg" />
-        ) : isError ? (
+        ) : isError || !data ? (
           <ErrorState
-            title="Unable to load pipeline status"
-            description="We couldn't reach the pipeline endpoint."
+            title="Unable to load pipeline timings"
+            description="We couldn't reach the timings endpoint."
             onRetry={() => void refetch()}
           />
         ) : (
-          <div className="flex items-start overflow-x-auto pb-2">
-            {data?.map((stage, index) => (
-              <PipelineStep
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {STAGES.map((stage) => (
+              <div
                 key={stage.id}
-                stage={stage}
-                isLast={index === data.length - 1}
-              />
+                className="bg-muted/30 flex flex-col gap-1 rounded-lg border p-3"
+              >
+                <p className="text-muted-foreground text-xs">{stage.label}</p>
+                <p className="text-foreground text-lg font-semibold">
+                  {formatDuration(stage.averageMs(data))}
+                </p>
+              </div>
             ))}
           </div>
         )}

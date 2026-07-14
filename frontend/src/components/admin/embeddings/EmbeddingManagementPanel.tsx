@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Boxes, Database, HardDrive, Layers, RefreshCw } from 'lucide-react'
+import { Boxes, Database, Layers, RefreshCw } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Card,
@@ -26,7 +26,6 @@ import {
   useEmbeddingStats,
   useRebuildEmbeddings,
 } from '@/hooks/use-admin-embeddings'
-import { formatBytes } from '@/lib/utils'
 
 interface StatDef {
   label: string
@@ -42,18 +41,12 @@ export function EmbeddingManagementPanel() {
   const stats: StatDef[] | null = data
     ? [
         { label: 'Collection', value: data.collectionName, icon: Boxes },
-        { label: 'Embedding model', value: data.embeddingModel, icon: Layers },
         {
           label: 'Vector count',
           value: data.vectorCount.toLocaleString(),
           icon: Database,
         },
-        { label: 'Dimensions', value: String(data.dimensions), icon: Layers },
-        {
-          label: 'Storage used',
-          value: formatBytes(data.storageUsedBytes),
-          icon: HardDrive,
-        },
+        { label: 'Distance metric', value: data.distanceMetric, icon: Layers },
       ]
     : null
 
@@ -79,8 +72,8 @@ export function EmbeddingManagementPanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }, (_, index) => (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
               <Skeleton key={index} className="h-20 w-full rounded-lg" />
             ))}
           </div>
@@ -91,27 +84,20 @@ export function EmbeddingManagementPanel() {
             onRetry={() => void refetch()}
           />
         ) : (
-          <>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {stats?.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="bg-muted/30 flex flex-col gap-2 rounded-lg border p-3"
-                >
-                  <stat.icon className="text-primary size-4" />
-                  <p className="text-foreground truncate text-lg font-semibold">
-                    {stat.value}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-            {data ? (
-              <p className="text-muted-foreground text-xs">
-                Last rebuilt {new Date(data.lastRebuiltAt).toLocaleString()}
-              </p>
-            ) : null}
-          </>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {stats?.map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-muted/30 flex flex-col gap-2 rounded-lg border p-3"
+              >
+                <stat.icon className="text-primary size-4" />
+                <p className="text-foreground truncate text-lg font-semibold">
+                  {stat.value}
+                </p>
+                <p className="text-muted-foreground text-xs">{stat.label}</p>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
 

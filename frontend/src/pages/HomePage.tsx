@@ -15,15 +15,15 @@ import { ChatPanel } from '@/components/analysis/chat/ChatPanel'
 import { useImageUpload } from '@/hooks/use-image-upload'
 import { usePredict } from '@/hooks/use-predict'
 import { useAnalysisChat } from '@/hooks/use-analysis-chat'
-import { useFollowUpQuestions } from '@/hooks/use-follow-up-questions'
+import { analysisService } from '@/services/analysis.service'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { HealthReport, Prediction } from '@/types/analysis'
+import type { Prediction, PredictionReport } from '@/types/analysis'
 
 export default function HomePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [result, setResult] = useState<{
     prediction: Prediction
-    report: HealthReport
+    report: PredictionReport
   } | null>(null)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
 
@@ -31,9 +31,8 @@ export default function HomePage() {
   const { predict, isPredicting, reset: resetPredict } = usePredict()
   const chat = useAnalysisChat(
     result?.prediction.id ?? '',
-    result?.prediction.plantName,
+    result?.prediction.imageId,
   )
-  const followUps = useFollowUpQuestions(result?.prediction.id ?? '')
 
   const status: UploadStatus = analysisError
     ? 'error'
@@ -50,9 +49,10 @@ export default function HomePage() {
     setPreviewUrl(objectUrl)
 
     try {
-      const { data: image } = await upload(file)
-      const { data } = await predict({ imageId: image.id })
-      setResult(data)
+      const image = await upload(file)
+      const prediction = await predict({ imageId: image.id })
+      const report = await analysisService.getPredictionReport(prediction.id)
+      setResult({ prediction, report })
     } catch (error) {
       setAnalysisError(
         getApiErrorMessage(error, 'Unable to analyze this image.'),
@@ -121,8 +121,6 @@ export default function HomePage() {
               plantName={result.prediction.plantName}
               messages={chat.messages}
               isSending={chat.isSending}
-              stage={chat.stage}
-              followUpQuestions={followUps.data}
               onSendMessage={chat.sendMessage}
               className="h-[calc(100vh-14rem)] min-h-112"
             />

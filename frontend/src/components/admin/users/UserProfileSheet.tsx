@@ -5,7 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type { AdminUser } from '@/types/admin'
@@ -38,7 +38,6 @@ export function UserProfileSheet({
             <SheetHeader>
               <div className="flex items-center gap-3">
                 <Avatar size="lg">
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
                   <AvatarFallback>{initials(user.name)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -68,18 +67,6 @@ export function UserProfileSheet({
                   <dt className="text-muted-foreground">Joined</dt>
                   <dd className="text-foreground font-medium">
                     {new Date(user.joinedAt).toLocaleDateString()}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Last active</dt>
-                  <dd className="text-foreground font-medium">
-                    {new Date(user.lastActiveAt).toLocaleString()}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Analyses performed</dt>
-                  <dd className="text-foreground font-medium">
-                    {user.analysisCount.toLocaleString()}
                   </dd>
                 </div>
               </dl>

@@ -81,7 +81,7 @@ export function SourcesPanel({
 
           return (
             <div
-              key={source.id}
+              key={source.chunkId}
               id={
                 messageId ? `citation-${messageId}-${citationIndex}` : undefined
               }
@@ -96,21 +96,22 @@ export function SourcesPanel({
               </span>
               <div className="min-w-0 flex-1 space-y-0.5">
                 <p className="text-foreground truncate font-medium">
-                  {source.documentTitle}
+                  {source.documentName}
                 </p>
-                <p className="text-muted-foreground">
-                  {source.chapter} &middot; Page {source.pageNumber}
-                </p>
-                {source.excerpt ? (
+                {source.chapter || source.pageNumber !== null ? (
+                  <p className="text-muted-foreground">
+                    {source.chapter}
+                    {source.chapter && source.pageNumber !== null ? ' · ' : ''}
+                    {source.pageNumber !== null ? `Page ${source.pageNumber}` : ''}
+                  </p>
+                ) : null}
+                {source.text ? (
                   <p className="text-muted-foreground mt-1 line-clamp-2 italic">
-                    &ldquo;{source.excerpt}&rdquo;
+                    &ldquo;{source.text}&rdquo;
                   </p>
                 ) : null}
               </div>
-              <ConfidenceBadge
-                value={source.retrievalConfidence}
-                className="shrink-0"
-              />
+              <ConfidenceBadge value={source.score} className="shrink-0" />
             </div>
           )
         })}

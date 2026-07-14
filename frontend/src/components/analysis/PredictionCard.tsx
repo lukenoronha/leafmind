@@ -31,9 +31,12 @@ export function PredictionCard({ prediction, className }: PredictionCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle className="text-xl">{prediction.plantName}</CardTitle>
-            <CardDescription className="italic">
-              {prediction.scientificName}
-            </CardDescription>
+            {prediction.candidates.length > 1 ? (
+              <CardDescription>
+                Runner-up: {prediction.candidates[1].label} (
+                {Math.round(prediction.candidates[1].confidence * 100)}%)
+              </CardDescription>
+            ) : null}
           </div>
           <Badge variant={confidenceVariant(prediction.confidence)}>
             <BadgeCheck />

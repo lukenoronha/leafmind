@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Bookmark, ChevronRight } from 'lucide-react'
+import { Bookmark, ChevronRight, Leaf } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -65,11 +65,9 @@ export function AnalysisSessionList({
         <Link key={session.id} to={ROUTES.home}>
           <Card className="hover:bg-muted/50 transition-colors">
             <CardContent className="flex items-center gap-4">
-              <img
-                src={session.image.url}
-                alt={session.prediction.plantName}
-                className="size-14 shrink-0 rounded-lg object-cover"
-              />
+              <div className="bg-muted flex size-14 shrink-0 items-center justify-center rounded-lg">
+                <Leaf className="text-muted-foreground size-6" />
+              </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <p className="text-foreground truncate font-medium">
@@ -82,8 +80,8 @@ export function AnalysisSessionList({
                     </Badge>
                   ) : null}
                 </div>
-                <p className="text-muted-foreground truncate text-sm italic">
-                  {session.prediction.scientificName}
+                <p className="text-muted-foreground truncate text-sm">
+                  {session.image.originalFilename}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1 text-right">

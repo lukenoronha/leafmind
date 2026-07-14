@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
@@ -158,8 +158,7 @@ export function UserManagementPanel() {
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Active</TableHead>
-                <TableHead>Analyses</TableHead>
-                <TableHead>Last active</TableHead>
+                <TableHead>Joined</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -173,7 +172,6 @@ export function UserManagementPanel() {
                       className="flex items-center gap-2 text-left"
                     >
                       <Avatar size="sm">
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
                         <AvatarFallback>{initials(user.name)}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -209,10 +207,7 @@ export function UserManagementPanel() {
                     />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {user.analysisCount.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(user.lastActiveAt).toLocaleDateString()}
+                    {new Date(user.joinedAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button

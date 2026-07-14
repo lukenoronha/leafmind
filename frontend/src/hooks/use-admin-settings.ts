@@ -9,10 +9,7 @@ const SETTINGS_QUERY_KEY = ['admin', 'settings'] as const
 export function useAdminSettings() {
   return useQuery({
     queryKey: SETTINGS_QUERY_KEY,
-    queryFn: async () => {
-      const { data } = await adminService.getSettings()
-      return data
-    },
+    queryFn: () => adminService.getSettings(),
   })
 }
 
@@ -28,6 +25,21 @@ export function useUpdateSetting() {
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Unable to update setting.'))
+    },
+  })
+}
+
+export function useResetSetting() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (key: string) => adminService.resetSetting(key),
+    onSuccess: () => {
+      toast.success('Setting reset to default.')
+      void queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY })
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Unable to reset setting.'))
     },
   })
 }

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { analysisService } from '@/services/analysis.service'
 import { chatStorage } from '@/lib/chat-storage'
 import { getApiErrorMessage } from '@/lib/api-error'
-import type { ChatMessage, RetrievalStage, Source } from '@/types/analysis'
+import type { ChatMessage } from '@/types/analysis'
 
 function createMessage(
   role: ChatMessage['role'],
@@ -19,20 +19,20 @@ function createMessage(
 }
 
 /**
- * Drives the RAG chat panel beneath a prediction. Streams each response
- * from /predict/chat/stream, surfacing retrieval stage, sources, and
- * response confidence as they arrive, and persists the conversation to
- * localStorage per prediction ID so it survives navigation/refresh.
- *
- * Retrieval itself happens entirely server-side — this hook only
- * consumes and renders the events the backend emits.
+ * Drives the RAG chat panel beneath a prediction. The backend's grounded
+ * chat endpoint (POST /rag/query) returns the complete answer and its
+ * retrieved sources in one response — there is no token-by-token stream —
+ * so this hook is a simple request/response flow with a single "isSending"
+ * loading state, rather than a staged retrieval pipeline. Conversation
+ * history is persisted to localStorage per prediction ID so it survives
+ * navigation/refresh.
  */
-export function useAnalysisChat(predictionId: string, plantName?: string) {
+export function useAnalysisChat(predictionId: string, imageId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     chatStorage.load(predictionId),
   )
-  const [stage, setStage] = useState<RetrievalStage | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const [isSending, setIsSending] = useState(false)
+  const [conversationId, setConversationId] = useState<string | undefined>()
 
   // Reset when the underlying prediction changes (new analysis), following
   // React's "adjust state during render" pattern instead of an effect —
@@ -41,12 +41,12 @@ export function useAnalysisChat(predictionId: string, plantName?: string) {
   if (predictionId !== loadedForId) {
     setLoadedForId(predictionId)
     setMessages(chatStorage.load(predictionId))
-    setStage(null)
+    setConversationId(undefined)
   }
 
   useEffect(() => {
-    chatStorage.save(predictionId, messages, plantName)
-  }, [predictionId, messages, plantName])
+    chatStorage.save(predictionId, messages)
+  }, [predictionId, messages])
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -54,110 +54,38 @@ export function useAnalysisChat(predictionId: string, plantName?: string) {
       if (!trimmed || !predictionId) return
 
       setMessages((prev) => [...prev, createMessage('user', trimmed)])
-
-      const assistantMessageId = crypto.randomUUID()
-      let assistantContent = ''
-      let sources: Source[] | undefined
-      let responseConfidence: number | undefined
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantMessageId,
-          role: 'assistant',
-          content: '',
-          createdAt: new Date().toISOString(),
-          isStreaming: true,
-        },
-      ])
-
-      const controller = new AbortController()
-      abortRef.current = controller
-      setStage('searching')
+      setIsSending(true)
 
       try {
-        for await (const event of analysisService.streamChatMessage(
-          { predictionId, message: trimmed },
-          controller.signal,
-        )) {
-          switch (event.type) {
-            case 'status':
-              setStage(event.stage)
-              break
-            case 'sources':
-              sources = event.sources
-              setMessages((prev) =>
-                prev.map((message) =>
-                  message.id === assistantMessageId
-                    ? { ...message, sources }
-                    : message,
-                ),
-              )
-              break
-            case 'token':
-              assistantContent += event.content
-              setMessages((prev) =>
-                prev.map((message) =>
-                  message.id === assistantMessageId
-                    ? { ...message, content: assistantContent }
-                    : message,
-                ),
-              )
-              break
-            case 'done':
-              responseConfidence = event.responseConfidence
-              setMessages((prev) =>
-                prev.map((message) =>
-                  message.id === assistantMessageId
-                    ? {
-                        ...message,
-                        responseConfidence,
-                        isStreaming: false,
-                        createdAt: event.createdAt,
-                      }
-                    : message,
-                ),
-              )
-              setStage('done')
-              break
-            case 'error':
-              throw new Error(event.message)
-          }
-        }
+        const reply = await analysisService.sendChatMessage({
+          predictionId,
+          imageId,
+          message: trimmed,
+          conversationId,
+        })
+        setConversationId((prev) => prev)
+        setMessages((prev) => [...prev, reply])
       } catch (error) {
-        if (controller.signal.aborted) return
-        setMessages((prev) =>
-          prev.map((message) =>
-            message.id === assistantMessageId
-              ? {
-                  ...message,
-                  content: getApiErrorMessage(
-                    error,
-                    'Unable to reach the assistant right now.',
-                  ),
-                  isStreaming: false,
-                }
-              : message,
+        setMessages((prev) => [
+          ...prev,
+          createMessage(
+            'assistant',
+            getApiErrorMessage(
+              error,
+              'Unable to reach the assistant right now.',
+            ),
           ),
-        )
-        setStage('error')
+        ])
       } finally {
-        abortRef.current = null
+        setIsSending(false)
       }
     },
-    [predictionId],
+    [predictionId, imageId, conversationId],
   )
-
-  useEffect(() => {
-    return () => abortRef.current?.abort()
-  }, [])
-
-  const isSending = stage !== null && stage !== 'done' && stage !== 'error'
 
   return {
     messages,
     sendMessage,
     isSending,
-    stage,
   }
 }

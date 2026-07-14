@@ -9,10 +9,7 @@ const DOCUMENTS_QUERY_KEY = ['admin', 'knowledge', 'documents'] as const
 export function useKnowledgeDocuments() {
   return useQuery({
     queryKey: DOCUMENTS_QUERY_KEY,
-    queryFn: async () => {
-      const { data } = await adminService.getKnowledgeDocuments()
-      return data
-    },
+    queryFn: () => adminService.getKnowledgeDocuments(),
   })
 }
 

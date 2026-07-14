@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, FileText, RefreshCcw, Trash2 } from 'lucide-react'
+import { FileText, RefreshCcw, Trash2 } from 'lucide-react'
 import {
   Card,
   CardAction,
@@ -33,11 +33,10 @@ import { formatBytes } from '@/lib/utils'
 
 const STATUS_VARIANT: Record<
   DocumentIndexStatus,
-  'default' | 'secondary' | 'destructive' | 'outline'
+  'default' | 'secondary' | 'destructive'
 > = {
   indexed: 'default',
-  indexing: 'secondary',
-  queued: 'outline',
+  processing: 'secondary',
   failed: 'destructive',
 }
 
@@ -101,10 +100,14 @@ export function KnowledgeBasePanel() {
               {data.map((doc) => (
                 <TableRow key={doc.id}>
                   <TableCell>
-                    <p className="text-foreground font-medium">{doc.title}</p>
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-foreground font-medium">
                       {doc.fileName}
                     </p>
+                    {doc.statusMessage ? (
+                      <p className="text-destructive text-xs">
+                        {doc.statusMessage}
+                      </p>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -115,7 +118,7 @@ export function KnowledgeBasePanel() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {doc.pageCount}
+                    {doc.pageCount ?? '—'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {doc.chunkCount.toLocaleString()}
@@ -132,27 +135,12 @@ export function KnowledgeBasePanel() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        asChild
-                        aria-label={`Preview ${doc.title}`}
-                      >
-                        <a
-                          href={doc.previewUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <Eye className="size-4" />
-                        </a>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
                         disabled={
                           reindexDocument.isPending ||
-                          doc.indexStatus === 'indexing'
+                          doc.indexStatus === 'processing'
                         }
                         onClick={() => reindexDocument.mutate(doc.id)}
-                        aria-label={`Re-index ${doc.title}`}
+                        aria-label={`Re-index ${doc.fileName}`}
                       >
                         <RefreshCcw className="size-4" />
                       </Button>
@@ -162,7 +150,7 @@ export function KnowledgeBasePanel() {
                         size="icon"
                         className="text-destructive hover:text-destructive"
                         onClick={() => setPendingDeleteId(doc.id)}
-                        aria-label={`Delete ${doc.title}`}
+                        aria-label={`Delete ${doc.fileName}`}
                       >
                         <Trash2 className="size-4" />
                       </Button>

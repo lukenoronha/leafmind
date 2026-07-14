@@ -6,28 +6,34 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
 import { SettingField } from '@/components/admin/settings/SettingField'
-import { useAdminSettings, useUpdateSetting } from '@/hooks/use-admin-settings'
+import {
+  useAdminSettings,
+  useResetSetting,
+  useUpdateSetting,
+} from '@/hooks/use-admin-settings'
 
+/**
+ * The backend exposes a fixed allow-list of settings (rag_top_k,
+ * rag_similarity_threshold, max_upload_size_mb, max_document_upload_size_mb,
+ * session_timeout_minutes, default_model_version) — no category grouping,
+ * so this renders one flat list rather than grouped sections.
+ */
 export function AdminSettingsPanel() {
   const { data, isLoading, isError, refetch } = useAdminSettings()
   const updateSetting = useUpdateSetting()
-
-  const grouped = data?.reduce<Record<string, typeof data>>((acc, setting) => {
-    acc[setting.category] = [...(acc[setting.category] ?? []), setting]
-    return acc
-  }, {})
+  const resetSetting = useResetSetting()
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Application settings</CardTitle>
         <CardDescription>
-          Configuration exposed by the backend. Changes apply immediately.
+          Configurable overrides for the RAG pipeline and upload limits.
+          Changes are audit-logged.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -43,33 +49,24 @@ export function AdminSettingsPanel() {
             description="We couldn't reach the settings endpoint."
             onRetry={() => void refetch()}
           />
-        ) : !grouped || Object.keys(grouped).length === 0 ? (
+        ) : !data || data.length === 0 ? (
           <EmptyState
             icon={Settings2}
             title="No configurable settings"
             description="The backend hasn't exposed any settings yet."
           />
         ) : (
-          <div className="space-y-6">
-            {Object.entries(grouped).map(([category, settings]) => (
-              <div key={category}>
-                <h3 className="text-foreground mb-1 text-sm font-semibold">
-                  {category}
-                </h3>
-                <Separator className="mb-1" />
-                <div className="divide-y">
-                  {settings.map((setting) => (
-                    <SettingField
-                      key={setting.key}
-                      setting={setting}
-                      disabled={updateSetting.isPending}
-                      onSave={(value) =>
-                        updateSetting.mutate({ key: setting.key, value })
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
+          <div className="divide-y">
+            {data.map((setting) => (
+              <SettingField
+                key={setting.key}
+                setting={setting}
+                disabled={updateSetting.isPending || resetSetting.isPending}
+                onSave={(value) =>
+                  updateSetting.mutate({ key: setting.key, value })
+                }
+                onReset={() => resetSetting.mutate(setting.key)}
+              />
             ))}
           </div>
         )}

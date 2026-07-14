@@ -12,25 +12,42 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { FileDropzone } from '@/components/admin/FileDropzone'
-import { useUploadDataset } from '@/hooks/use-admin-datasets'
+import { useUploadDatasetClass } from '@/hooks/use-admin-datasets'
 
+/**
+ * Uploads (or replaces) one dataset class — the backend's real unit of
+ * dataset management is a labeled folder of leaf images, not a versioned
+ * ZIP-archive dataset. `replaceExisting` maps directly to the backend's
+ * `replace_existing` flag on the same upload endpoint, so there is no
+ * separate "replace" flow.
+ */
 export function UploadDatasetDialog() {
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [file, setFile] = useState<File | null>(null)
-  const upload = useUploadDataset()
+  const [trainingLabel, setTrainingLabel] = useState('')
+  const [folderName, setFolderName] = useState('')
+  const [replaceExisting, setReplaceExisting] = useState(false)
+  const [files, setFiles] = useState<File[]>([])
+  const upload = useUploadDatasetClass()
 
   function reset() {
-    setName('')
-    setFile(null)
+    setTrainingLabel('')
+    setFolderName('')
+    setReplaceExisting(false)
+    setFiles([])
     upload.reset()
   }
 
   function handleSubmit() {
-    if (!file || !name.trim()) return
+    if (files.length === 0 || !trainingLabel.trim() || !folderName.trim()) return
     upload.mutate(
-      { file, name: name.trim() },
+      {
+        trainingLabel: trainingLabel.trim(),
+        folderName: folderName.trim(),
+        files,
+        replaceExisting,
+      },
       {
         onSuccess: () => {
           setOpen(false)
@@ -51,38 +68,62 @@ export function UploadDatasetDialog() {
       <DialogTrigger asChild>
         <Button type="button" size="sm">
           <Plus />
-          Upload dataset
+          Upload class
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload dataset</DialogTitle>
+          <DialogTitle>Upload dataset class</DialogTitle>
           <DialogDescription>
-            Add a new labeled image dataset for model training.
+            Add (or replace) a labeled species folder in the identification
+            model's training data.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="dataset-name">Dataset name</Label>
+            <Label htmlFor="training-label">Species (training label)</Label>
             <Input
-              id="dataset-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Medicinal Leaves v4"
+              id="training-label"
+              value={trainingLabel}
+              onChange={(event) => setTrainingLabel(event.target.value)}
+              placeholder="e.g. Azadirachta_indica"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="folder-name">Folder name</Label>
+            <Input
+              id="folder-name"
+              value={folderName}
+              onChange={(event) => setFolderName(event.target.value)}
+              placeholder="e.g. Azadirachta_indica"
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <Label htmlFor="replace-existing" className="text-foreground">
+              Replace existing images for this class
+            </Label>
+            <Switch
+              id="replace-existing"
+              checked={replaceExisting}
+              onCheckedChange={setReplaceExisting}
             />
           </div>
 
           <FileDropzone
-            accept=".zip"
-            hint="ZIP archive of labeled images"
+            accept="image/jpeg,image/png"
+            hint="One or more leaf images (JPEG/PNG)"
+            multiple
             isUploading={upload.isPending}
             progress={upload.progress}
-            onFileSelected={setFile}
+            onFileSelected={(file) => setFiles([file])}
+            onFilesSelected={setFiles}
           />
-          {file ? (
+          {files.length > 0 ? (
             <p className="text-muted-foreground text-sm">
-              Selected: <span className="text-foreground">{file.name}</span>
+              Selected: <span className="text-foreground">{files.length} file(s)</span>
             </p>
           ) : null}
         </div>
@@ -99,7 +140,12 @@ export function UploadDatasetDialog() {
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={!file || !name.trim() || upload.isPending}
+            disabled={
+              files.length === 0 ||
+              !trainingLabel.trim() ||
+              !folderName.trim() ||
+              upload.isPending
+            }
           >
             {upload.isPending ? 'Uploading...' : 'Upload'}
           </Button>

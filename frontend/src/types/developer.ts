@@ -1,79 +1,82 @@
 import type { Source } from '@/types/analysis'
 
-export type TrendDirection = 'up' | 'down' | 'flat'
-
-export interface KpiMetric {
-  id: string
-  label: string
-  value: string
-  trend?: TrendDirection
-  /** Change vs. the previous period, e.g. "+4.2%". */
-  changeLabel?: string
+/** Sourced from GET /developer/analytics — real aggregate counts/averages,
+ * not a bespoke "KPI" endpoint (the backend has none). */
+export interface AnalyticsSummary {
+  totalUploads: number
+  predictionCount: number
+  avgConfidence: number | null
+  avgInferenceMs: number | null
+  avgRetrievalMs: number | null
+  indexedDocuments: number
+  totalChunks: number
+  vectorCount: number
 }
 
-export type PipelineStageStatus = 'pending' | 'running' | 'complete' | 'error'
-
-export interface PipelineStage {
-  id: string
-  label: string
-  status: PipelineStageStatus
-  /** Duration in milliseconds, once complete. */
-  durationMs?: number
+/** Sourced from GET /developer/metrics/timings — average latency across all
+ * persisted predictions/chat turns. Presented as static pipeline-stage
+ * timing info, not live per-request progress (the backend has no
+ * "pipeline in progress" concept to report). */
+export interface AverageTimings {
+  predictionCount: number
+  avgPreprocessingMs: number | null
+  avgPredictionInferenceMs: number | null
+  chatTurnCount: number
+  avgRetrievalMs: number | null
+  avgChatInferenceMs: number | null
 }
 
 export interface PredictionAnalytics {
   id: string
   plantName: string
   confidence: number
-  /** End-to-end request latency, in milliseconds. */
-  latencyMs: number
-  /** Model inference time specifically, in milliseconds. */
-  processingTimeMs: number
   modelVersion: string
   predictedAt: string
 }
 
-export interface RagAnalyticsSummary {
-  avgRetrievedDocuments: number
-  avgSimilarityScore: number
-  avgRetrievalTimeMs: number
-  embeddingModel: string
-  vectorCount: number
-}
-
 export interface PromptInspectorEntry {
-  id: string
+  chatMessageId: string
+  conversationId: string
   question: string
-  predictedPlant: string
+  predictedPlant: string | null
   retrievedContext: Source[]
   generatedResponse: string
-  responseConfidence: number
-  createdAt: string
 }
 
 export type LogLevel = 'info' | 'warning' | 'error' | 'debug'
 
 export interface LogEntry {
-  id: string
-  level: LogLevel
-  source: string
-  message: string
   timestamp: string
+  level: LogLevel
+  message: string
+  module: string
+  function: string
+  line: number
 }
 
 export interface LogFilters {
   level?: LogLevel
-  source?: string
   search?: string
+  limit?: number
+  offset?: number
 }
 
-export type SystemComponentStatus = 'operational' | 'degraded' | 'down'
-
-export interface SystemComponentHealth {
-  id: string
-  name: string
-  status: SystemComponentStatus
-  /** e.g. response time, uptime percentage. */
-  detail: string
-  lastCheckedAt: string
+/** Sourced from GET /developer/system-status. */
+export interface SystemStatus {
+  backendHealthy: boolean
+  databaseHealthy: boolean
+  chromadbHealthy: boolean
+  vectorCount: number
+  vlmModelLoaded: boolean
+  embeddingModelLoaded: boolean
+  gpuAvailable: boolean
+  gpuDeviceCount: number
+  gpuDeviceNames: string[]
+  cpuPercent: number
+  memoryTotalMb: number
+  memoryUsedMb: number
+  memoryPercent: number
+  diskTotalGb: number
+  diskUsedGb: number
+  diskPercent: number
 }
