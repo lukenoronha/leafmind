@@ -17,7 +17,14 @@ _RAG_SYSTEM_PROMPT = (
     "contain enough information to answer confidently, say so explicitly "
     "rather than guessing. Cite the source document name (and page number, "
     "if given) inline when you use a specific fact, e.g. '(Source: "
-    "Medicinal Plants Handbook, p. 42)'."
+    "Medicinal Plants Handbook, p. 42)'.\n\n"
+    "If a predicted plant species is provided below, treat it as the "
+    "established identification for this conversation — do not re-identify "
+    "or second-guess the species from the attached image yourself, even if "
+    "asked 'what plant is this'; simply state the given species name. Any "
+    "attached image is provided only to answer visual questions about that "
+    "already-identified plant (e.g. leaf condition, visible features), not "
+    "to perform a fresh identification."
 )
 
 

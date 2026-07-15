@@ -80,7 +80,12 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
            * The markdown tree itself renders in one pass regardless of
            * whether future content arrives incrementally or all at once,
            * so no restructuring would be needed if streaming is added. */}
-          <div className="prose prose-sm dark:prose-invert prose-p:my-1.5 prose-pre:my-2 prose-ul:my-1.5 prose-ol:my-1.5 max-w-none">
+          <div
+            className={cn(
+              'prose prose-sm prose-p:my-1.5 prose-pre:my-2 prose-ul:my-1.5 prose-ol:my-1.5 max-w-none',
+              isUser ? 'prose-invert' : 'dark:prose-invert',
+            )}
+          >
             <Markdown
               components={{
                 a: ({ href, children }) => {
