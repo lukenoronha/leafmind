@@ -89,6 +89,15 @@ class HFQwenVLBackend:
                     "(`pip install -r requirements.txt`) to enable real inference."
                 ) from exc
 
+            if self._settings.VLM_TORCH_NUM_THREADS > 0:
+                previous = torch.get_num_threads()
+                torch.set_num_threads(self._settings.VLM_TORCH_NUM_THREADS)
+                logger.info(
+                    "torch.set_num_threads({}) applied (default was {})",
+                    self._settings.VLM_TORCH_NUM_THREADS,
+                    previous,
+                )
+
             dtype = "auto" if self._settings.VLM_DTYPE == "auto" else getattr(torch, self._settings.VLM_DTYPE)
 
             try:

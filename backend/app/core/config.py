@@ -155,6 +155,12 @@ class Settings(BaseSettings):
     VLM_MAX_PIXELS: int = 1280 * 28 * 28
     VLM_TOP_K_CANDIDATES: int = 3
     VLM_LOAD_ON_STARTUP: bool = False
+    # PyTorch's CPU backend defaults to the physical core count (e.g. 8 on a
+    # 16-thread/8-core CPU), leaving hyperthreaded logical cores unused. 0
+    # keeps that default; any positive value overrides it via
+    # torch.set_num_threads() before the model loads, for benchmarking
+    # whether the extra logical cores actually help this workload.
+    VLM_TORCH_NUM_THREADS: int = 0
 
     # --- CLIP few-shot image retrieval (grounds classification in labeled reference images) ---
     CLIP_MODEL_NAME: str = "openai/clip-vit-base-patch32"
