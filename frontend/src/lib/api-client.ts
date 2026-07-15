@@ -18,9 +18,17 @@ export const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  const token = tokenStorage.getAccessToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  // Don't clobber a caller-supplied Authorization header — auth.service.ts's
+  // login() explicitly attaches a just-issued token to its immediate
+  // /auth/me call, before tokenStorage has been updated with it (that only
+  // happens in AuthProvider's onSuccess, which runs after login() returns).
+  // Overwriting it here with the (empty/stale) stored token made that call
+  // 401 every time, even on a fully successful login.
+  if (!config.headers.Authorization) {
+    const token = tokenStorage.getAccessToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
   return config
 })
