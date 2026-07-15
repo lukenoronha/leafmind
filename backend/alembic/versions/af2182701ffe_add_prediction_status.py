@@ -1,7 +1,7 @@
 """add prediction status column
 
 Revision ID: af2182701ffe
-Revises: 7f2a9c5e1d4b
+Revises: 2e6a4d8f0b1c
 Create Date: 2026-07-15
 
 Input Validation Layer: adds `predictions.status` (confident / low_confidence)
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "af2182701ffe"
-down_revision: Union[str, None] = "7f2a9c5e1d4b"
+down_revision: Union[str, None] = "2e6a4d8f0b1c"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
