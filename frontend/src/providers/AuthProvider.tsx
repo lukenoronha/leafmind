@@ -6,7 +6,11 @@ import {
   type ReactNode,
 } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AuthContext, type AuthContextValue } from '@/providers/auth-context'
+import {
+  AuthContext,
+  CURRENT_USER_QUERY_KEY,
+  type AuthContextValue,
+} from '@/providers/auth-context'
 import type { AuthUser } from '@/types/auth'
 import {
   authService,
@@ -17,8 +21,6 @@ import { tokenStorage } from '@/lib/token-storage'
 import { authEvents } from '@/lib/auth-events'
 import { router } from '@/routes/router'
 import { ROUTES } from '@/routes/paths'
-
-const CURRENT_USER_QUERY_KEY = ['auth', 'current-user'] as const
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()

@@ -22,6 +22,11 @@ export interface ResetPasswordPayload {
   password: string
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string
+  password: string
+}
+
 export interface AuthResponse extends AuthTokens {
   user: AuthUser
 }
@@ -125,4 +130,13 @@ export const authService = {
 
   resetPassword: (payload: ResetPasswordPayload) =>
     apiClient.post<void>('/auth/reset-password', payload),
+
+  /** On success the backend revokes every refresh token, so callers must
+   * treat this as a forced re-login (see ChangePasswordRequest / the
+   * /change-password route description in backend/app/api/v1/endpoints/auth.py). */
+  changePassword: (payload: ChangePasswordPayload) =>
+    apiClient.put<void>('/auth/change-password', {
+      current_password: payload.currentPassword,
+      password: payload.password,
+    }),
 }
