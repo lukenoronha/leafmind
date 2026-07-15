@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   BookMarked,
   Circle,
@@ -8,6 +9,7 @@ import {
   LifeBuoy,
   LogOut,
   MessageSquareText,
+  Pencil,
   Presentation,
   Settings,
   User as UserIcon,
@@ -22,6 +24,7 @@ import { KeyboardShortcutsDialog } from '@/components/user-hub/KeyboardShortcuts
 import { useUserStats } from '@/hooks/use-user-stats'
 import { usePresentationMode } from '@/hooks/use-presentation-mode'
 import { ROUTES } from '@/routes/paths'
+import { cn } from '@/lib/utils'
 import type { AuthUser } from '@/types/auth'
 
 function formatMemberSince(iso?: string) {
@@ -29,7 +32,7 @@ function formatMemberSince(iso?: string) {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return null
   return date.toLocaleDateString(undefined, {
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   })
 }
@@ -49,9 +52,19 @@ interface UserHubContentProps {
   onLogout: () => void
 }
 
+const fadeInUp = {
+  hidden: { opacity: 0, y: 6 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' as const } },
+}
+
 /**
- * The actual panel body — reused by both the desktop Popover (UserHubMenu)
- * and the mobile bottom Sheet, so the two surfaces never drift out of sync.
+ * The actual panel body — reused by both the desktop Popover (UserHub) and
+ * the mobile bottom Sheet, so the two surfaces never drift out of sync.
+ * Density is deliberate throughout (compact stat grid, 2-column actions,
+ * single-row appearance/presentation controls) so the whole panel fits
+ * without scrolling on first open, matching the reference apps' account
+ * panels (ChatGPT/Claude/Cursor/Linear/Notion/GitHub Desktop) rather than
+ * a full settings page condensed into a popover.
  */
 export function UserHubContent({
   user,
@@ -61,64 +74,82 @@ export function UserHubContent({
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { stats, isLoading: statsLoading } = useUserStats()
   const { isPresentationMode, togglePresentationMode } = usePresentationMode()
+  const prefersReducedMotion = useReducedMotion()
   const canTogglePresentationMode =
     user.role === 'developer' || user.role === 'admin'
   const memberSince = formatMemberSince(user.memberSince)
 
+  const motionProps = prefersReducedMotion
+    ? {}
+    : {
+        variants: fadeInUp,
+        initial: 'hidden' as const,
+        animate: 'show' as const,
+      }
+
   return (
-    <div className="flex flex-col gap-5">
-      {/* Section 1 — user information */}
-      <div className="flex items-start gap-3">
-        <Avatar size="lg" className="size-14">
+    <div className="flex flex-col gap-4">
+      {/* Header */}
+      <motion.div {...motionProps} className="flex items-start gap-3">
+        <Avatar size="lg" className="size-11 shrink-0">
           <AvatarImage src={user.avatarUrl} alt={user.name} />
-          <AvatarFallback className="text-base">
+          <AvatarFallback className="text-sm">
             {initialsOf(user.name)}
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <p className="text-foreground truncate text-sm font-semibold">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-foreground truncate text-sm font-bold">
               {user.name}
             </p>
-            <span className="text-success inline-flex items-center gap-1 text-xs">
-              <Circle className="size-2 fill-current" aria-hidden="true" />
-              Online
+            <span
+              className="text-success inline-flex shrink-0 items-center"
+              title="Online"
+            >
+              <Circle className="size-1.5 fill-current" aria-hidden="true" />
+              <span className="sr-only">Online</span>
             </span>
           </div>
           <p className="text-muted-foreground truncate text-xs">
             {user.email}
           </p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
-            <RoleBadge role={user.role} />
-            {memberSince ? (
-              <span className="text-muted-foreground text-xs">
-                Member since {memberSince}
-              </span>
-            ) : (
-              <span className="text-muted-foreground text-xs italic">
-                Member since — unavailable
-              </span>
-            )}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <RoleBadge role={user.role} className="px-1.5 py-0 text-[0.65rem]" />
+            <span className="text-muted-foreground text-[0.65rem]">
+              {memberSince ? `Since ${memberSince}` : 'Since —'}
+            </span>
           </div>
         </div>
-      </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground shrink-0"
+          onClick={() => onNavigate(ROUTES.user)}
+          aria-label="Edit profile"
+          title="Edit profile"
+        >
+          <Pencil className="size-3.5" />
+        </Button>
+      </motion.div>
 
       <Separator />
 
-      {/* Section 2 — quick statistics */}
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Your activity
-        </p>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Activity — one compact grid, values or "—" inline, never a whole
+       * card saying "Coming soon". Capped at 5 stats / 2 rows. */}
+      <motion.div {...motionProps} className="space-y-1.5">
+        <h3 className="text-muted-foreground text-[0.65rem] font-medium tracking-wide uppercase">
+          Activity
+        </h3>
+        <div className="grid grid-cols-3 gap-1.5">
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="bg-muted/50 rounded-lg border px-3 py-2"
+              className="bg-muted/40 rounded-md px-2 py-1.5 text-center"
             >
-              <p className="text-foreground text-lg font-semibold tabular-nums">
+              <p className="text-foreground text-base leading-tight font-semibold tabular-nums">
                 {statsLoading ? (
-                  <span className="bg-muted-foreground/20 inline-block h-5 w-8 animate-pulse rounded-md" />
+                  <span className="bg-muted-foreground/20 mx-auto inline-block h-4 w-6 animate-pulse rounded" />
                 ) : stat.available && stat.value !== null ? (
                   stat.label === 'Average Confidence' ? (
                     `${stat.value}%`
@@ -126,25 +157,25 @@ export function UserHubContent({
                     stat.value
                   )
                 ) : (
-                  <span className="text-muted-foreground text-xs font-normal italic">
-                    Coming soon
-                  </span>
+                  <span className="text-muted-foreground/60 text-sm">—</span>
                 )}
               </p>
-              <p className="text-muted-foreground text-xs">{stat.label}</p>
+              <p className="text-muted-foreground truncate text-[0.65rem] leading-tight">
+                {stat.label}
+              </p>
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       <Separator />
 
-      {/* Section 3 — quick actions */}
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+      {/* Quick actions — 2-column grid of compact outlined buttons */}
+      <motion.div {...motionProps} className="space-y-1.5">
+        <h3 className="text-muted-foreground text-[0.65rem] font-medium tracking-wide uppercase">
           Quick actions
-        </p>
-        <nav className="flex flex-col">
+        </h3>
+        <nav className="grid grid-cols-2 gap-1.5" aria-label="Quick actions">
           <HubActionButton
             icon={UserIcon}
             label="Profile"
@@ -156,14 +187,14 @@ export function UserHubContent({
             onClick={() => onNavigate(ROUTES.settings)}
           />
           <HubActionButton
-            icon={BookMarked}
-            label="Saved Reports"
-            onClick={() => onNavigate(ROUTES.savedReports)}
-          />
-          <HubActionButton
             icon={History}
             label="History"
             onClick={() => onNavigate(ROUTES.history)}
+          />
+          <HubActionButton
+            icon={BookMarked}
+            label="Saved Reports"
+            onClick={() => onNavigate(ROUTES.savedReports)}
           />
           <HubActionButton
             icon={MessageSquareText}
@@ -172,12 +203,12 @@ export function UserHubContent({
           />
           <HubActionButton
             icon={Keyboard}
-            label="Keyboard Shortcuts"
+            label="Shortcuts"
             onClick={() => setShortcutsOpen(true)}
           />
           <HubActionButton
             icon={LifeBuoy}
-            label="Help & Feedback"
+            label="Help"
             onClick={() =>
               toast('Help & feedback', {
                 description: 'Coming soon — no support channel is wired up yet.',
@@ -185,54 +216,67 @@ export function UserHubContent({
             }
           />
         </nav>
-      </div>
+      </motion.div>
 
       <Separator />
 
-      {/* Section 4 — appearance */}
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Appearance
-        </p>
+      {/* Appearance — compact segmented control, no section label needed
+       * at this density (ChatGPT/GitHub-style model/theme picker). */}
+      <motion.div {...motionProps}>
         <ThemeSegmentedControl />
-      </div>
+      </motion.div>
 
-      {/* Section 5 — presentation mode */}
+      {/* Presentation mode — single row, dev/admin only */}
       {canTogglePresentationMode ? (
         <>
           <Separator />
-          <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Presentation className="text-primary size-4" aria-hidden="true" />
-                <p className="text-foreground text-sm font-medium">
+          <motion.div
+            {...motionProps}
+            className="flex items-center justify-between gap-3"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <Presentation
+                className="text-muted-foreground size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <p className="text-foreground text-xs font-medium">
                   Presentation Mode
                 </p>
+                <p className="text-muted-foreground truncate text-[0.65rem]">
+                  Hides dev controls for demos.{' '}
+                  <button
+                    type="button"
+                    className="hover:text-foreground underline decoration-dotted underline-offset-2 disabled:no-underline disabled:opacity-60"
+                    disabled
+                    title="Coming soon"
+                  >
+                    Learn more
+                  </button>
+                </p>
               </div>
-              <Switch
-                checked={isPresentationMode}
-                onCheckedChange={togglePresentationMode}
-                aria-label="Toggle presentation mode"
-              />
             </div>
-            <p className="text-muted-foreground text-xs">
-              Hide developer controls, optimize spacing, and use larger
-              typography for a cleaner interface — ideal for demos.
-            </p>
-          </div>
+            <Switch
+              size="sm"
+              checked={isPresentationMode}
+              onCheckedChange={togglePresentationMode}
+              aria-label="Toggle presentation mode"
+            />
+          </motion.div>
         </>
       ) : null}
 
       <Separator />
 
-      {/* Section 7 — logout, danger styling, separated from the rest */}
+      {/* Logout — danger styling, separated */}
       <Button
         type="button"
         variant="ghost"
-        className="text-destructive hover:bg-destructive/10 hover:text-destructive justify-start"
+        size="sm"
+        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 justify-start px-2"
         onClick={onLogout}
       >
-        <LogOut className="size-4" />
+        <LogOut className="size-3.5" />
         Log out
       </Button>
 
@@ -247,27 +291,22 @@ export function UserHubContent({
 function HubActionButton({
   icon: Icon,
   label,
-  shortcut,
   onClick,
 }: {
   icon: typeof UserIcon
   label: string
-  shortcut?: string
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="hover:bg-accent focus-visible:ring-ring/50 flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm outline-none focus-visible:ring-2"
+      className={cn(
+        'hover:bg-accent hover:border-accent-foreground/10 focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-left text-xs outline-none transition-colors focus-visible:ring-2',
+      )}
     >
-      <Icon className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-      <span className="text-foreground flex-1">{label}</span>
-      {shortcut ? (
-        <span className="text-muted-foreground text-xs tracking-widest">
-          {shortcut}
-        </span>
-      ) : null}
+      <Icon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+      <span className="text-foreground truncate">{label}</span>
     </button>
   )
 }

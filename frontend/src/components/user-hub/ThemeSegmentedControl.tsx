@@ -42,7 +42,7 @@ export function ThemeSegmentedControl() {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className="bg-muted grid grid-cols-3 gap-1 rounded-lg p-1"
+      className="bg-muted grid grid-cols-3 gap-0.5 rounded-md p-0.5"
     >
       {OPTIONS.map((option, index) => {
         const isActive = active === option.value
@@ -60,7 +60,7 @@ export function ThemeSegmentedControl() {
             onClick={() => setTheme(option.value)}
             onKeyDown={handleKeyDown}
             className={cn(
-              'focus-visible:ring-ring/50 relative flex flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2',
+              'focus-visible:ring-ring/50 relative flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-2',
               isActive
                 ? 'text-foreground'
                 : 'text-muted-foreground hover:text-foreground',
@@ -69,11 +69,11 @@ export function ThemeSegmentedControl() {
             {isActive ? (
               <motion.span
                 layoutId={prefersReducedMotion ? undefined : 'theme-segment-active'}
-                className="bg-background absolute inset-0 rounded-md shadow-sm"
+                className="bg-background absolute inset-0 rounded shadow-sm"
                 transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
               />
             ) : null}
-            <Icon className="relative size-3.5" aria-hidden="true" />
+            <Icon className="relative size-3" aria-hidden="true" />
             <span className="relative">{option.label}</span>
           </button>
         )
