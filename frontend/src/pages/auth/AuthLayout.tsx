@@ -36,7 +36,7 @@ export function AuthLayout({ title, description, children }: AuthLayoutProps) {
           {/* Logo's showWordmark only toggles the separate HTML span it
            * renders — the "LeafMind" text is also baked into logo.png
            * itself, so this deliberately doesn't add a second wordmark. */}
-          <Logo showWordmark={false} imgClassName="size-32 drop-shadow-sm" />
+          <Logo showWordmark={false} imgClassName="size-48 drop-shadow-sm" />
         </motion.div>
 
         <motion.div
