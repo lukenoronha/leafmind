@@ -46,10 +46,12 @@ interface ChatPanelProps {
 }
 
 /**
- * Single, centered, ChatGPT-style conversation column — no separate upload
- * box or side panel. Every feed item (uploaded image, prediction result,
- * text message) renders inline in one scrollable timeline, with the "+"
- * attach button living in ChatInput at the bottom.
+ * ChatGPT-style conversation area — no separate upload box or side panel.
+ * The empty state is allowed to use the full available width (so it isn't a
+ * narrow column floating inside another narrow column on wide screens), but
+ * once the feed has content it's laid out in a centered column capped at a
+ * readable width, same as ChatGPT/Gemini/Claude keep their own message
+ * threads from stretching edge-to-edge on ultrawide monitors.
  */
 export function ChatPanel({
   feed,
@@ -133,20 +135,20 @@ export function ChatPanel({
     return imageUrlByBackendId.get(prediction.imageId) ?? null
   }
 
+  const isFeedEmpty = feed.length === 0
+
   return (
-    <div
-      className={cn(
-        'mx-auto flex w-full max-w-160 flex-col gap-6 xl:max-w-170 2xl:max-w-200',
-        className,
-      )}
-    >
+    <div className={cn('mx-auto flex w-full flex-col gap-6', className)}>
       <div
         ref={feedContainerRef}
         role="log"
         aria-label="Analysis conversation"
         aria-live="polite"
         tabIndex={0}
-        className="focus-visible:ring-ring/50 relative flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto rounded-lg pr-1 outline-none focus-visible:ring-2"
+        className={cn(
+          'focus-visible:ring-ring/50 relative flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto rounded-lg pr-1 outline-none focus-visible:ring-2',
+          !isFeedEmpty && 'mx-auto w-full max-w-160 xl:max-w-170',
+        )}
       >
         {latestPrediction ? (
           <PinnedPlantPill
@@ -158,7 +160,7 @@ export function ChatPanel({
           />
         ) : null}
 
-        {feed.length === 0 ? (
+        {isFeedEmpty ? (
           <EmptyState
             onFileSelected={onAttachImage}
             disabled={attachDisabled}
@@ -202,25 +204,33 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {suggestedTopics.length > 0 ? (
-        <SuggestedPrompts
-          topics={suggestedTopics}
-          onSelect={onSendMessage}
-          disabled={isSending}
-        />
-      ) : null}
+      <div
+        className={cn(
+          'mx-auto w-full space-y-3',
+          !isFeedEmpty && 'max-w-160 xl:max-w-170',
+        )}
+      >
+        {suggestedTopics.length > 0 ? (
+          <SuggestedPrompts
+            topics={suggestedTopics}
+            onSelect={onSendMessage}
+            disabled={isSending}
+          />
+        ) : null}
 
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-center text-xs text-balance">
-          AI-generated responses are grounded using trusted reference sources.
-          Always verify medicinal usage with qualified professionals.
-        </p>
-        <ChatInput
-          onSend={onSendMessage}
-          onAttachImage={onAttachImage}
-          attachDisabled={attachDisabled}
-          disabled={isSending}
-        />
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-center text-xs text-balance">
+            AI-generated responses are grounded using trusted reference
+            sources. Always verify medicinal usage with qualified
+            professionals.
+          </p>
+          <ChatInput
+            onSend={onSendMessage}
+            onAttachImage={onAttachImage}
+            attachDisabled={attachDisabled}
+            disabled={isSending}
+          />
+        </div>
       </div>
     </div>
   )
