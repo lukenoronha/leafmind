@@ -29,7 +29,7 @@ export function AdminKpiGrid() {
       <ErrorState
         title="Unable to load KPIs"
         description="We couldn't reach the admin analytics endpoints."
-        onRetry={refetch}
+        onRetry={() => void refetch()}
       />
     )
   }

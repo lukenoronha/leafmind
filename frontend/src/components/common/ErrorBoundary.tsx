@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Logo } from '@/components/common/Logo'
+import { ErrorPageLayout } from '@/components/common/ErrorPageLayout'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -35,20 +35,15 @@ export class ErrorBoundary extends Component<
     if (!this.state.error) return this.props.children
 
     return (
-      <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
-        <Logo />
-        <AlertTriangle className="text-destructive size-10" />
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            LeafMind hit a snag
-          </h1>
-          <p className="text-muted-foreground max-w-md text-sm">
-            Something went wrong loading the application. Reloading usually
-            fixes this.
-          </p>
-        </div>
-        <Button onClick={() => window.location.reload()}>Reload</Button>
-      </div>
+      <ErrorPageLayout
+        icon={AlertTriangle}
+        iconClassName="text-destructive"
+        title="LeafMind hit a snag"
+        description="Something went wrong loading the application. Reloading usually fixes this."
+        actions={
+          <Button onClick={() => window.location.reload()}>Reload</Button>
+        }
+      />
     )
   }
 }

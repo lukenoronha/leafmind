@@ -6,6 +6,9 @@ export interface AuthUser {
   email: string
   role: UserRole
   avatarUrl?: string
+  /** ISO timestamp from the backend's `created_at` — used for the "Member
+   * since" line in the User Hub. */
+  memberSince?: string
 }
 
 export interface AuthTokens {

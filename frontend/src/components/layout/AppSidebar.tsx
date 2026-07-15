@@ -10,9 +10,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
 import { Logo } from '@/components/common/Logo'
 import { Badge } from '@/components/ui/badge'
+import { UserHub } from '@/components/user-hub/UserHub'
 import {
   filterNavItemsByRole,
   filterNavItemsForPresentation,
@@ -97,6 +99,10 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
+        </SidebarMenu>
+        <SidebarSeparator className="mx-0" />
+        <SidebarMenu>
+          <UserHub />
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
