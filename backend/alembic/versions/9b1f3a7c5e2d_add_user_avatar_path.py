@@ -1,7 +1,7 @@
 """add users.avatar_path
 
 Revision ID: 9b1f3a7c5e2d
-Revises: 2e6a4d8f0b1c
+Revises: af2182701ffe
 Create Date: 2026-07-15
 
 Sprint 8: User Hub profile editing + avatar upload. Adds a single additive,
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "9b1f3a7c5e2d"
-down_revision: Union[str, None] = "2e6a4d8f0b1c"
+down_revision: Union[str, None] = "af2182701ffe"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
