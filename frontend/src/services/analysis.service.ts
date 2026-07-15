@@ -62,6 +62,7 @@ interface BackendHistoryItem {
   predicted_label: string
   confidence: number
   model_name: string
+  is_saved: boolean
   created_at: string
 }
 
@@ -160,9 +161,7 @@ function toAnalysisSession(data: BackendHistoryItem): AnalysisSession {
       confidence: data.confidence,
     },
     createdAt: data.created_at,
-    // Always false — the backend has no "save a report" concept (no flag,
-    // no endpoint). See the `saved` field's doc comment in types/analysis.ts.
-    saved: false,
+    saved: data.is_saved,
   }
 }
 
@@ -228,15 +227,11 @@ export const analysisService = {
     return data.items.map(toAnalysisSession)
   },
 
-  /**
-   * The backend has no "saved reports" concept (no flag on predictions, no
-   * save/list-saved endpoint) — this returns an empty list rather than
-   * silently reusing full history, so the Saved Reports page's empty state
-   * is accurate instead of misleading. Restore this once a real backend
-   * feature exists.
-   */
   getSavedReports: async (): Promise<AnalysisSession[]> => {
-    return []
+    const { data } = await apiClient.get<BackendHistoryResponse>('/history', {
+      params: { saved: true },
+    })
+    return data.items.map(toAnalysisSession)
   },
 
   /**

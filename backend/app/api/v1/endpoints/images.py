@@ -4,6 +4,8 @@ Thin HTTP layer over `ImageAnalysisService`; all preprocessing/inference/
 storage orchestration and structured latency logging live there.
 """
 
+import uuid
+
 from fastapi import APIRouter, File, UploadFile, status
 
 from app.api.deps import CurrentUserDep, ImageAnalysisServiceDep
@@ -13,6 +15,7 @@ from app.schemas.images import (
     HistoryResponse,
     PredictRequest,
     PredictResponse,
+    UpdatePredictionSaveRequest,
     UploadResponse,
 )
 
@@ -82,16 +85,18 @@ async def predict(
     response_model=HistoryResponse,
     summary="List past predictions for the current user",
     description="Paginated history of this user's prior classification results, "
-    "most recent first.",
+    "most recent first. Pass `saved=true` to list only bookmarked reports "
+    "(powers the Saved Reports page).",
 )
 async def get_history(
     current_user: CurrentUserDep,
     service: ImageAnalysisServiceDep,
     limit: int = 20,
     offset: int = 0,
+    saved: bool = False,
 ) -> HistoryResponse:
     rows, total = await service.get_history(
-        user=current_user, limit=min(limit, 100), offset=max(offset, 0)
+        user=current_user, limit=min(limit, 100), offset=max(offset, 0), saved_only=saved
     )
     items = [
         HistoryItem(
@@ -101,8 +106,37 @@ async def get_history(
             predicted_label=prediction.predicted_label,
             confidence=prediction.confidence,
             model_name=prediction.model_name,
+            is_saved=prediction.is_saved,
             created_at=prediction.created_at,
         )
         for prediction, image in rows
     ]
     return HistoryResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.patch(
+    "/predictions/{prediction_id}/save",
+    response_model=HistoryItem,
+    summary="Bookmark or unbookmark a prediction",
+    description="Marks a past prediction as saved (or unsaves it), for the "
+    "Saved Reports page. Only the prediction's owner may change this.",
+)
+async def set_prediction_saved(
+    prediction_id: uuid.UUID,
+    payload: UpdatePredictionSaveRequest,
+    current_user: CurrentUserDep,
+    service: ImageAnalysisServiceDep,
+) -> HistoryItem:
+    prediction, image = await service.set_saved(
+        user=current_user, prediction_id=prediction_id, is_saved=payload.is_saved
+    )
+    return HistoryItem(
+        prediction_id=prediction.id,
+        image_id=image.id,
+        original_filename=image.original_filename,
+        predicted_label=prediction.predicted_label,
+        confidence=prediction.confidence,
+        model_name=prediction.model_name,
+        is_saved=prediction.is_saved,
+        created_at=prediction.created_at,
+    )

@@ -3,7 +3,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -38,6 +38,10 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     predicted_label: Mapped[str] = mapped_column(String(150), nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     candidates: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+
+    is_saved: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false", index=True
+    )
 
     model_name: Mapped[str] = mapped_column(String(150), nullable=False)
     raw_response: Mapped[str] = mapped_column(String, nullable=False)

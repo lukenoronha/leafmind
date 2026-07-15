@@ -81,10 +81,11 @@ export interface HistoryItem {
 }
 
 /**
- * One row in History/Saved Reports. `saved` is always `false` — the backend
- * has no "save a report" concept (no flag, no endpoint), so this can never
- * be `true` until that backend feature exists. Kept (rather than removed)
- * so the existing History/Saved Reports UI keeps working off real data.
+ * One row in History/Saved Reports. `saved` reflects the backend's
+ * `predictions.is_saved` flag (`GET /history` / `GET /history?saved=true`).
+ * There is no UI control yet to actually set it — see
+ * `PATCH /predictions/{id}/save` — so it will read `false` for every
+ * existing prediction until a save action is added to the UI.
  * `image` has no URL — the backend has no endpoint that serves uploaded
  * image bytes back by ID, only a `GET /history` metadata listing.
  */
