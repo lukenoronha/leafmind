@@ -15,6 +15,15 @@ was never recorded and can't be reconstructed. Hand-written (matching
 app.models exactly) for the same reason as prior migrations: no live
 PostgreSQL instance available in this environment to run --autogenerate
 against.
+
+Uses batch mode (`op.batch_alter_table`) rather than a standalone
+`op.create_foreign_key`/`op.add_column` — every prior migration only adds
+foreign keys as part of `op.create_table` for a brand-new table, but this
+one adds an FK column to an *existing* table, which SQLite can't do via a
+plain `ALTER TABLE ADD CONSTRAINT` (no support for altering constraints at
+all). Batch mode recreates the table under the hood on SQLite and is a
+transparent passthrough to plain `ALTER TABLE` on PostgreSQL, so this stays
+correct on both.
 """
 
 from typing import Sequence, Union
@@ -30,24 +39,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "chat_messages",
-        sa.Column("prediction_id", postgresql.UUID(as_uuid=True), nullable=True),
-    )
-    op.create_index("ix_chat_messages_prediction_id", "chat_messages", ["prediction_id"])
-    op.create_foreign_key(
-        "fk_chat_messages_prediction_id_predictions",
-        "chat_messages",
-        "predictions",
-        ["prediction_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
+    with op.batch_alter_table("chat_messages") as batch_op:
+        batch_op.add_column(
+            sa.Column("prediction_id", postgresql.UUID(as_uuid=True), nullable=True)
+        )
+        batch_op.create_index("ix_chat_messages_prediction_id", ["prediction_id"])
+        batch_op.create_foreign_key(
+            "fk_chat_messages_prediction_id_predictions",
+            "predictions",
+            ["prediction_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "fk_chat_messages_prediction_id_predictions", "chat_messages", type_="foreignkey"
-    )
-    op.drop_index("ix_chat_messages_prediction_id", table_name="chat_messages")
-    op.drop_column("chat_messages", "prediction_id")
+    with op.batch_alter_table("chat_messages") as batch_op:
+        batch_op.drop_constraint(
+            "fk_chat_messages_prediction_id_predictions", type_="foreignkey"
+        )
+        batch_op.drop_index("ix_chat_messages_prediction_id")
+        batch_op.drop_column("prediction_id")
