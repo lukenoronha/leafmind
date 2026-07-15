@@ -22,6 +22,13 @@ _CHAT_SYSTEM_PROMPT = (
     "answer in it, but say so explicitly if you are uncertain."
 )
 
+_LEAF_ASSESSMENT_SYSTEM_PROMPT = (
+    "You are an image content checker for a plant leaf identification system. "
+    "You only judge what is visible in the photo — you never guess a species. "
+    "You must always answer using the exact JSON schema requested — no prose "
+    "outside the JSON."
+)
+
 
 def build_classification_prompt(
     *,
@@ -120,6 +127,53 @@ def build_classification_messages(
     return [
         {"role": "system", "content": _CLASSIFICATION_SYSTEM_PROMPT},
         {"role": "user", "content": content},
+    ]
+
+
+def build_leaf_assessment_messages(*, pil_image) -> list[dict]:
+    """Qwen2.5-VL chat-format messages for the pre-classification content check.
+
+    Combines leaf-presence, leaf-count, and occlusion assessment into a
+    single generation call (rather than three separate ones) — the lightest
+    way to add this validation stage on top of the existing VLM without a
+    second model. Blur/lighting are deliberately excluded here since those
+    are cheaper to compute directly from pixel data (see
+    `app.images.preprocessing.content_validation`) and don't need a model call.
+    """
+    schema_example = json.dumps(
+        {
+            "is_leaf": True,
+            "leaf_count": 1,
+            "is_heavily_occluded": False,
+            "reasoning": "short justification",
+        },
+        indent=2,
+    )
+    prompt = (
+        "Look at this image and answer only about what is visible — do not "
+        "identify a species.\n\n"
+        "1. is_leaf: true if the image's main subject is one or more plant "
+        "leaves (not a whole plant/tree, not an unrelated object, not a "
+        "person/animal/document/etc.).\n"
+        "2. leaf_count: your best count of distinct, clearly separate "
+        "individual leaves that are prominent in the frame (use 1 if it's a "
+        "single leaf, or if leaflets belong to one compound leaf).\n"
+        "3. is_heavily_occluded: true if the leaf is so obstructed (by a "
+        "hand, other objects, heavy shadow, or cropping) that its shape, "
+        "margin, or venation cannot be clearly seen.\n\n"
+        f"Respond with strict JSON matching this schema:\n\n{schema_example}\n\n"
+        "Respond with JSON only."
+    )
+
+    return [
+        {"role": "system", "content": _LEAF_ASSESSMENT_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": pil_image},
+                {"type": "text", "text": prompt},
+            ],
+        },
     ]
 
 

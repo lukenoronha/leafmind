@@ -69,7 +69,7 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
           className={cn(
             'rounded-2xl px-4 py-2.5 text-sm',
             isUser
-              ? 'bg-primary text-primary-foreground rounded-tr-sm'
+              ? 'bg-primary text-white rounded-tr-sm'
               : 'bg-muted text-foreground rounded-tl-sm',
           )}
         >

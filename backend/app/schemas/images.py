@@ -5,6 +5,11 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+_LOW_CONFIDENCE_MESSAGE = (
+    "Unable to confidently identify this plant. It may not belong to the "
+    "supported medicinal plant dataset or the image quality may be insufficient."
+)
+
 
 class UploadResponse(BaseModel):
     image_id: uuid.UUID
@@ -36,6 +41,32 @@ class PredictResponse(BaseModel):
     preprocessing_ms: float
     inference_ms: float
     created_at: datetime
+    # Additive fields (Input Validation Layer): existing clients that only
+    # read the fields above are unaffected.
+    status: str = "confident"
+    message: str | None = Field(
+        default=None,
+        description="Set when status is 'low_confidence' — a user-facing "
+        "explanation the frontend can show instead of treating this as a "
+        "confident species identification.",
+    )
+
+    @classmethod
+    def from_prediction(cls, prediction) -> "PredictResponse":
+        is_low_confidence = prediction.status.value == "low_confidence"
+        return cls(
+            prediction_id=prediction.id,
+            image_id=prediction.image_id,
+            predicted_label=prediction.predicted_label,
+            confidence=prediction.confidence,
+            candidates=[CandidateResponse(**c) for c in prediction.candidates],
+            model_name=prediction.model_name,
+            preprocessing_ms=prediction.preprocessing_ms,
+            inference_ms=prediction.inference_ms,
+            created_at=prediction.created_at,
+            status=prediction.status.value,
+            message=_LOW_CONFIDENCE_MESSAGE if is_low_confidence else None,
+        )
 
 
 class HistoryItem(BaseModel):
@@ -47,6 +78,7 @@ class HistoryItem(BaseModel):
     model_name: str
     is_saved: bool
     created_at: datetime
+    status: str = "confident"
 
 
 class HistoryResponse(BaseModel):

@@ -33,6 +33,10 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
   )
   const [isSending, setIsSending] = useState(false)
   const [conversationId, setConversationId] = useState<string | undefined>()
+  // Tracks whether the "no prediction yet" notice has already been shown
+  // for the current (missing) prediction, so repeated Send presses append
+  // it once instead of spamming the feed with the same assistant message.
+  const [noPredictionNoticeShown, setNoPredictionNoticeShown] = useState(false)
 
   // Reset when the underlying prediction changes (new analysis), following
   // React's "adjust state during render" pattern instead of an effect —
@@ -42,6 +46,7 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
     setLoadedForId(predictionId)
     setMessages(chatStorage.load(predictionId))
     setConversationId(undefined)
+    setNoPredictionNoticeShown(false)
   }
 
   useEffect(() => {
@@ -62,11 +67,16 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
         setMessages((prev) => [
           ...prev,
           createMessage('user', trimmed),
-          createMessage(
-            'assistant',
-            'Upload and identify a leaf photo before starting a chat.',
-          ),
+          ...(noPredictionNoticeShown
+            ? []
+            : [
+                createMessage(
+                  'assistant',
+                  'Please upload and identify a leaf image before asking questions.',
+                ),
+              ]),
         ])
+        setNoPredictionNoticeShown(true)
         return
       }
 
