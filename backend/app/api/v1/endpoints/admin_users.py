@@ -124,3 +124,20 @@ async def delete_user(
 ) -> MessageResponse:
     await service.delete_user(actor=current_user, user_id=user_id)
     return MessageResponse(message="User deactivated.")
+
+
+@router.delete(
+    "/{user_id}/permanent",
+    response_model=MessageResponse,
+    summary="Permanently delete a user",
+    description="Irreversibly deletes the user row and, via ON DELETE CASCADE, every "
+    "refresh token, uploaded image, prediction, chat message, and document that "
+    "references it. Distinct from the soft-delete above — use only when the account's "
+    "history genuinely should not survive (spam/test accounts, erasure requests). "
+    "Admins cannot permanently delete their own account.",
+)
+async def hard_delete_user(
+    user_id: uuid.UUID, current_user: CurrentUserDep, service: AdminUserServiceDep
+) -> MessageResponse:
+    await service.hard_delete_user(actor=current_user, user_id=user_id)
+    return MessageResponse(message="User permanently deleted.")

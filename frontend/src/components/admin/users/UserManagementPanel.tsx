@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Users } from 'lucide-react'
+import { Ban, Trash2, Users } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -35,6 +35,7 @@ import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import {
   useAdminUsers,
   useDeleteUser,
+  useHardDeleteUser,
   useSetUserStatus,
 } from '@/hooks/use-admin-users'
 import type { AccountStatus, AdminUser } from '@/types/admin'
@@ -67,7 +68,12 @@ export function UserManagementPanel() {
   const [role, setRole] = useState<UserRole | 'all'>('all')
   const [status, setStatus] = useState<AccountStatus | 'all'>('all')
   const [profileUser, setProfileUser] = useState<AdminUser | null>(null)
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [pendingDeactivateId, setPendingDeactivateId] = useState<string | null>(
+    null,
+  )
+  const [pendingHardDeleteId, setPendingHardDeleteId] = useState<string | null>(
+    null,
+  )
 
   const { data, isLoading, isError, refetch } = useAdminUsers({
     search: search.trim() || undefined,
@@ -77,11 +83,19 @@ export function UserManagementPanel() {
 
   const setUserStatus = useSetUserStatus()
   const deleteUser = useDeleteUser()
+  const hardDeleteUser = useHardDeleteUser()
 
-  function handleConfirmDelete() {
-    if (!pendingDeleteId) return
-    deleteUser.mutate(pendingDeleteId, {
-      onSuccess: () => setPendingDeleteId(null),
+  function handleConfirmDeactivate() {
+    if (!pendingDeactivateId) return
+    deleteUser.mutate(pendingDeactivateId, {
+      onSuccess: () => setPendingDeactivateId(null),
+    })
+  }
+
+  function handleConfirmHardDelete() {
+    if (!pendingHardDeleteId) return
+    hardDeleteUser.mutate(pendingHardDeleteId, {
+      onSuccess: () => setPendingHardDeleteId(null),
     })
   }
 
@@ -210,16 +224,29 @@ export function UserManagementPanel() {
                     {new Date(user.joinedAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setPendingDeleteId(user.id)}
-                      aria-label={`Delete ${user.name}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setPendingDeactivateId(user.id)}
+                        aria-label={`Deactivate ${user.name}`}
+                        title="Deactivate (revokes access, keeps history)"
+                      >
+                        <Ban className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setPendingHardDeleteId(user.id)}
+                        aria-label={`Permanently delete ${user.name}`}
+                        title="Permanently delete (irreversible)"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -235,12 +262,23 @@ export function UserManagementPanel() {
       />
 
       <DeleteConfirmDialog
-        open={!!pendingDeleteId}
-        onOpenChange={(open) => !open && setPendingDeleteId(null)}
-        title="Delete this user?"
-        description="This permanently removes the account and its analysis history. This action cannot be undone."
-        onConfirm={handleConfirmDelete}
+        open={!!pendingDeactivateId}
+        onOpenChange={(open) => !open && setPendingDeactivateId(null)}
+        title="Deactivate this user?"
+        description="This revokes their access to LeafMind and signs them out everywhere. Their prediction and chat history is preserved, not deleted — you can reactivate the account later from this page."
+        confirmLabel="Deactivate"
+        confirmPendingLabel="Deactivating..."
+        onConfirm={handleConfirmDeactivate}
         isPending={deleteUser.isPending}
+      />
+
+      <DeleteConfirmDialog
+        open={!!pendingHardDeleteId}
+        onOpenChange={(open) => !open && setPendingHardDeleteId(null)}
+        title="Permanently delete this user?"
+        description="This permanently removes the account and every prediction, chat message, and document associated with it. This cannot be undone. If you only want to revoke access, use Deactivate instead."
+        onConfirm={handleConfirmHardDelete}
+        isPending={hardDeleteUser.isPending}
       />
     </Card>
   )

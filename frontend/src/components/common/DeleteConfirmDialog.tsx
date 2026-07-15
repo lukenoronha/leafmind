@@ -16,6 +16,9 @@ interface DeleteConfirmDialogProps {
   description: string
   onConfirm: () => void
   isPending?: boolean
+  /** Defaults to "Delete"/"Deleting..." — override for non-delete confirm actions. */
+  confirmLabel?: string
+  confirmPendingLabel?: string
 }
 
 export function DeleteConfirmDialog({
@@ -25,6 +28,8 @@ export function DeleteConfirmDialog({
   description,
   onConfirm,
   isPending,
+  confirmLabel = 'Delete',
+  confirmPendingLabel = 'Deleting...',
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +48,7 @@ export function DeleteConfirmDialog({
               onConfirm()
             }}
           >
-            {isPending ? 'Deleting...' : 'Delete'}
+            {isPending ? confirmPendingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

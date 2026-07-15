@@ -282,6 +282,11 @@ export const adminService = {
   deleteUser: (userId: string) =>
     apiClient.delete<void>(`/admin/users/${userId}`),
 
+  // Irreversible — distinct from deleteUser() above, which only
+  // deactivates the account and preserves its history.
+  hardDeleteUser: (userId: string) =>
+    apiClient.delete<void>(`/admin/users/${userId}/permanent`),
+
   // Datasets (real backend concept: labeled image classes, not versioned
   // ML datasets with ZIP-archive replace)
   getDatasetStatistics: async (): Promise<DatasetStatistics> => {
