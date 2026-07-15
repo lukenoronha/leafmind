@@ -1,7 +1,7 @@
 import { forwardRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Cpu, Sparkles } from 'lucide-react'
+import { AlertTriangle, Cpu, Sparkles } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { SourcesPanel } from '@/components/analysis/chat/SourcesPanel'
@@ -73,7 +73,8 @@ export const PredictionResultCard = forwardRef<
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={cn(
         'bg-card w-full max-w-[85%] overflow-hidden rounded-2xl rounded-tl-sm border shadow-sm',
-        tier === 'low' && 'border-destructive/40 border-dashed',
+        (tier === 'low' || prediction.status === 'low_confidence') &&
+          'border-destructive/40 border-dashed',
         tier === 'very-low' && 'border-destructive/60 border-dashed',
         className,
       )}
@@ -90,6 +91,16 @@ export const PredictionResultCard = forwardRef<
           </p>
           <PredictionConfidenceBadge value={prediction.confidence} />
         </div>
+
+        {prediction.status === 'low_confidence' && prediction.message ? (
+          <div
+            role="alert"
+            className="border-destructive/40 bg-destructive/5 text-destructive flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+          >
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{prediction.message}</span>
+          </div>
+        ) : null}
 
         {tier === 'medium' && runnerUp ? (
           <p className="text-muted-foreground text-xs">

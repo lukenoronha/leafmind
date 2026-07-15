@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { analysisService } from '@/services/analysis.service'
 import { chatStorage } from '@/lib/chat-storage'
 import { getApiErrorMessage } from '@/lib/api-error'
@@ -47,7 +47,19 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
     setMessages(chatStorage.load(predictionId))
     setConversationId(undefined)
     setNoPredictionNoticeShown(false)
+    // A send still in flight for the *old* prediction will detect the ID
+    // mismatch via latestPredictionIdRef and skip its own setIsSending(false)
+    // (see sendMessage) — so this hook's fresh state for the new prediction
+    // must reset it here instead, or the input would stay disabled forever.
+    setIsSending(false)
   }
+
+  // Mirrors `predictionId` for reads from inside already-in-flight async
+  // callbacks (see sendMessage below) — a plain prop can't be "checked
+  // later" once a closure has captured it, but a ref always reflects the
+  // latest render.
+  const latestPredictionIdRef = useRef(predictionId)
+  latestPredictionIdRef.current = predictionId
 
   useEffect(() => {
     chatStorage.save(predictionId, messages)
@@ -80,19 +92,27 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
         return
       }
 
+      // Captured up front so a reply that resolves after the user has
+      // already moved on to a new analysis (predictionId changed) can be
+      // detected and dropped below, instead of being appended to — and
+      // persisted into localStorage under — the wrong conversation.
+      const requestPredictionId = predictionId
+
       setMessages((prev) => [...prev, createMessage('user', trimmed)])
       setIsSending(true)
 
       try {
-        const reply = await analysisService.sendChatMessage({
+        const result = await analysisService.sendChatMessage({
           predictionId,
           imageId,
           message: trimmed,
           conversationId,
         })
-        setConversationId((prev) => prev)
-        setMessages((prev) => [...prev, reply])
+        if (requestPredictionId !== latestPredictionIdRef.current) return
+        setConversationId(result.conversationId)
+        setMessages((prev) => [...prev, result.message])
       } catch (error) {
+        if (requestPredictionId !== latestPredictionIdRef.current) return
         setMessages((prev) => [
           ...prev,
           createMessage(
@@ -104,7 +124,9 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
           ),
         ])
       } finally {
-        setIsSending(false)
+        if (requestPredictionId === latestPredictionIdRef.current) {
+          setIsSending(false)
+        }
       }
     },
     [predictionId, imageId, conversationId],

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Printer } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -47,6 +48,7 @@ export default function HomePage() {
     latestPrediction?.id ?? '',
     latestPrediction?.imageId,
   )
+  const queryClient = useQueryClient()
 
   const isAnalyzing = isUploading || isPredicting
   const uploadingItemIdRef = useRef<string | null>(null)
@@ -95,11 +97,27 @@ export default function HomePage() {
         { type: 'prediction', id: crypto.randomUUID(), prediction },
       ])
 
+      // A new prediction changes both History and Saved Reports (the new
+      // entry should appear in the former, and both lists show is_saved
+      // state) — without this, either list would keep showing pre-analysis
+      // data until manually reloaded.
+      void queryClient.invalidateQueries({ queryKey: ['analysis', 'history'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['analysis', 'saved-reports'],
+      })
+
       // Fetched once here (not just lazily inside the card) so the print
-      // view has real report data available as soon as one exists.
+      // view has real report data available as soon as one exists — and
+      // written into the query cache under the same key PredictionResultCard
+      // /SourcesTab read from, so their own useQuery hits this cached value
+      // instead of firing a second, redundant request for the same report.
       try {
         const report = await analysisService.getPredictionReport(prediction.id)
         setLatestReport(report)
+        queryClient.setQueryData(
+          ['analysis', 'prediction-report', prediction.id],
+          report,
+        )
       } catch {
         // Non-fatal — PredictionResultCard's own collapsible section will
         // retry this fetch when expanded.
@@ -132,13 +150,27 @@ export default function HomePage() {
 
   async function handleReplaceImage(imageItemId: string, file: File) {
     const previewUrl = URL.createObjectURL(file)
-    updateImageItem(imageItemId, {
-      previewUrl,
-      filename: file.name,
-      sizeBytes: file.size,
-      status: 'uploading',
-      progress: 0,
-      errorMessage: undefined,
+
+    // Revoke the item's previous blob URL — without this, every "Replace
+    // photo" action leaked one object URL for the rest of the tab's life.
+    setFeed((prev) => {
+      const existing = prev.find(
+        (item) => item.id === imageItemId && item.type === 'image',
+      )
+      if (existing?.type === 'image') URL.revokeObjectURL(existing.previewUrl)
+      return prev.map((item) =>
+        item.id === imageItemId && item.type === 'image'
+          ? {
+              ...item,
+              previewUrl,
+              filename: file.name,
+              sizeBytes: file.size,
+              status: 'uploading' as const,
+              progress: 0,
+              errorMessage: undefined,
+            }
+          : item,
+      )
     })
     setLatestImageUrl(previewUrl)
 

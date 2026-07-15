@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -32,10 +32,19 @@ export function ChatMessageBubble({ message }: ChatMessageBubbleProps) {
     [message.content, sourceCount],
   )
 
+  const copyResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current) clearTimeout(copyResetTimeoutRef.current)
+    }
+  }, [])
+
   async function handleCopy() {
     await navigator.clipboard.writeText(message.content)
     setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    if (copyResetTimeoutRef.current) clearTimeout(copyResetTimeoutRef.current)
+    copyResetTimeoutRef.current = setTimeout(() => setCopied(false), 1500)
   }
 
   return (

@@ -13,10 +13,12 @@ export interface UserStat {
 /**
  * Derives what it can from real, already-fetched backend data (History and
  * Saved Reports both come from GET /history and GET /saved-reports) rather
- * than inventing numbers. "Questions Asked" and "Bookmarks" have no backend
- * concept at all yet (chat lives only in localStorage per prediction, and
- * `AnalysisSession.saved` is hardcoded false — see types/analysis.ts), so
- * they're reported as unavailable instead of guessed.
+ * than inventing numbers. "Questions Asked" and "Bookmarks" are reported as
+ * unavailable instead of guessed: chat threads only exist in per-browser
+ * localStorage (see use-chat-history.ts), and although `AnalysisSession.saved`
+ * is a real backend field (`predictions.is_saved`, see types/analysis.ts),
+ * there is no UI action yet that ever sets it true, so a "Bookmarks" count
+ * derived from it would always read zero.
  */
 export function useUserStats() {
   const { data: history, isLoading: isHistoryLoading } = useAnalysisHistory()
@@ -55,10 +57,10 @@ export function useUserStats() {
         value: averageConfidence,
         available: confidences.length > 0,
       },
-      // No backend endpoint aggregates chat message counts or bookmarks
-      // across a user's history — chat threads only exist in per-browser
-      // localStorage (see use-chat-history.ts), and "bookmark" isn't a
-      // real concept server-side (AnalysisSession.saved is always false).
+      // No backend endpoint aggregates chat message counts across a user's
+      // history (chat threads only exist in per-browser localStorage), and
+      // no UI action exists yet to ever mark a report saved — see the
+      // module doc comment above for why both stay unavailable.
       { label: 'Questions Asked', value: null, available: false },
       { label: 'Bookmarks', value: null, available: false },
     ]
