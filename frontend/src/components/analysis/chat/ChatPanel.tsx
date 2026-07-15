@@ -42,6 +42,11 @@ interface ChatPanelProps {
   onRemoveImage: (id: string) => void
   onOpenInspector: (predictionId: string, tab: InspectorTab) => void
   attachDisabled?: boolean
+  /** False until a prediction exists to attach the conversation to —
+   * sendMessage() silently no-ops without one (see useAnalysisChat), so
+   * the input must stay disabled rather than let a message vanish with
+   * no feedback. */
+  canSendMessage?: boolean
   className?: string
 }
 
@@ -60,6 +65,7 @@ export function ChatPanel({
   onRemoveImage,
   onOpenInspector,
   attachDisabled,
+  canSendMessage = true,
   className,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -206,7 +212,7 @@ export function ChatPanel({
         <SuggestedPrompts
           topics={suggestedTopics}
           onSelect={onSendMessage}
-          disabled={isSending}
+          disabled={isSending || !canSendMessage}
         />
       ) : null}
 
@@ -214,7 +220,7 @@ export function ChatPanel({
         onSend={onSendMessage}
         onAttachImage={onAttachImage}
         attachDisabled={attachDisabled}
-        disabled={isSending}
+        disabled={isSending || !canSendMessage}
       />
     </div>
   )

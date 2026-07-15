@@ -237,6 +237,7 @@ export default function HomePage() {
           onRemoveImage={handleRemoveImage}
           onOpenInspector={handleOpenInspector}
           attachDisabled={isAnalyzing}
+          canSendMessage={!!latestPrediction}
           className="min-h-0 flex-1 print:hidden"
         />
 

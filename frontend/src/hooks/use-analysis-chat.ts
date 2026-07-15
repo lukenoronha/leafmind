@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { analysisService } from '@/services/analysis.service'
 import { chatStorage } from '@/lib/chat-storage'
 import { getApiErrorMessage } from '@/lib/api-error'
@@ -51,7 +52,15 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
   const sendMessage = useCallback(
     async (content: string) => {
       const trimmed = content.trim()
-      if (!trimmed || !predictionId) return
+      if (!trimmed) return
+      if (!predictionId) {
+        // Should be unreachable — ChatPanel disables the input until a
+        // prediction exists (see HomePage's canSendMessage) — but this
+        // used to fail silently here with no feedback at all, which
+        // looked exactly like a message the user sent just vanishing.
+        toast.error('Upload and identify a leaf photo before starting a chat.')
+        return
+      }
 
       setMessages((prev) => [...prev, createMessage('user', trimmed)])
       setIsSending(true)
