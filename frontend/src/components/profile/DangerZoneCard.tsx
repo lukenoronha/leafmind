@@ -1,7 +1,7 @@
 import { LogOut, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ComingSoonBadge } from '@/components/profile/ComingSoonBadge'
+import { ComingSoonBadge } from '@/components/common/ComingSoonBadge'
 
 /**
  * Danger zone. Logout is real; account deletion has no backend endpoint

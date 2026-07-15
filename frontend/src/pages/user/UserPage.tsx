@@ -1,16 +1,11 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { motion, useReducedMotion } from 'framer-motion'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Loader } from '@/components/common/Loader'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { SectionCard } from '@/components/common/SectionCard'
+import { CardContent } from '@/components/ui/card'
 import { ProfileSummaryCard } from '@/components/profile/ProfileSummaryCard'
 import { ProfileInformationCard } from '@/components/profile/ProfileInformationCard'
 import { PreferencesCard } from '@/components/profile/PreferencesCard'
@@ -19,7 +14,6 @@ import { UsageStatsGrid } from '@/components/profile/UsageStatsGrid'
 import { DangerZoneCard } from '@/components/profile/DangerZoneCard'
 import { useAuth } from '@/hooks/use-auth'
 import { ROUTES } from '@/routes/paths'
-import { cn } from '@/lib/utils'
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 6 },
@@ -140,42 +134,5 @@ export default function UserPage() {
         </div>
       </motion.div>
     </div>
-  )
-}
-
-/**
- * Compact Card shell shared by every profile section — tighter padding
- * than the stock Card so the page stays information-dense, with a real
- * `<h2>` for the section heading.
- */
-function SectionCard({
-  title,
-  description,
-  className,
-  titleClassName,
-  children,
-}: {
-  title?: string
-  description?: string
-  className?: string
-  titleClassName?: string
-  children: ReactNode
-}) {
-  return (
-    <Card className={cn('gap-4 py-5 transition-shadow hover:shadow-md', className)}>
-      {title ? (
-        <CardHeader className="gap-0.5 px-5">
-          <CardTitle className={cn('text-sm', titleClassName)}>
-            <h2>{title}</h2>
-          </CardTitle>
-          {description ? (
-            <CardDescription className="text-xs">
-              {description}
-            </CardDescription>
-          ) : null}
-        </CardHeader>
-      ) : null}
-      {title ? <CardContent className="px-5">{children}</CardContent> : children}
-    </Card>
   )
 }

@@ -2,7 +2,7 @@ import { Bell, Globe, Palette, Presentation } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { ThemeSegmentedControl } from '@/components/user-hub/ThemeSegmentedControl'
-import { ComingSoonBadge } from '@/components/profile/ComingSoonBadge'
+import { ComingSoonBadge } from '@/components/common/ComingSoonBadge'
 import { usePresentationMode } from '@/hooks/use-presentation-mode'
 import type { AuthUser } from '@/types/auth'
 
