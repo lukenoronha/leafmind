@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { analysisService } from '@/services/analysis.service'
 import { chatStorage } from '@/lib/chat-storage'
 import { getApiErrorMessage } from '@/lib/api-error'
@@ -53,12 +52,21 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
     async (content: string) => {
       const trimmed = content.trim()
       if (!trimmed) return
+
+      // The message box stays enabled even before a prediction exists (a
+      // user can type while identification is still running), so this is
+      // a real, reachable case rather than a defensive check — surfaced
+      // as an inline error bubble, matching how a failed API call reads
+      // below, rather than silently dropping the message.
       if (!predictionId) {
-        // Should be unreachable — ChatPanel disables the input until a
-        // prediction exists (see HomePage's canSendMessage) — but this
-        // used to fail silently here with no feedback at all, which
-        // looked exactly like a message the user sent just vanishing.
-        toast.error('Upload and identify a leaf photo before starting a chat.')
+        setMessages((prev) => [
+          ...prev,
+          createMessage('user', trimmed),
+          createMessage(
+            'assistant',
+            'Upload and identify a leaf photo before starting a chat.',
+          ),
+        ])
         return
       }
 

@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { CheckCircle2, ImageIcon, RotateCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ProcessingTimeline } from '@/components/analysis/chat/ProcessingTimeline'
 import { UploadErrorCard } from '@/components/analysis/empty-state/UploadErrorCard'
 import type { ImageFeedStatus } from '@/components/analysis/chat/ChatPanel'
 import {
@@ -42,7 +41,6 @@ export function ImageUploadBubble({
 }: ImageUploadBubbleProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefersReducedMotion = useReducedMotion()
-  const isBusy = status === 'uploading' || status === 'analyzing'
   const [localError, setLocalError] = useState<string | null>(null)
 
   function handleReplaceFile(files: FileList | null) {
@@ -72,15 +70,18 @@ export function ImageUploadBubble({
             className="max-h-64 w-full object-contain"
           />
 
-          {isBusy ? (
+          {status === 'uploading' ? (
             <div
               role="status"
               aria-live="polite"
               className="bg-background/85 absolute inset-0 flex flex-col items-center justify-center px-4 backdrop-blur-sm"
             >
-              <ProcessingTimeline status={status} progress={progress} />
+              <span className="text-muted-foreground text-xs font-medium">
+                Uploading
+                {typeof progress === 'number' ? ` · ${Math.round(progress)}%` : ''}
+              </span>
             </div>
-          ) : (
+          ) : status === 'analyzing' ? null : (
             <div className="absolute top-2 right-2 flex gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/bubble:opacity-100 sm:focus-within:opacity-100">
               <Button
                 type="button"
