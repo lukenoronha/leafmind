@@ -9,11 +9,13 @@ from fastapi import APIRouter, File, Request, UploadFile, status
 from app.api.deps import AuthServiceDep, CurrentUserDep
 from app.schemas.auth import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     LogoutRequest,
     MessageResponse,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UpdateProfileRequest,
     UserResponse,
@@ -123,6 +125,38 @@ async def upload_avatar(
         content_type=file.content_type or "application/octet-stream",
     )
     return UserResponse.from_user(user, request_base_url=str(request.base_url))
+
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Request a password reset link",
+    description="Always returns success regardless of whether the email is "
+    "registered, so this endpoint can't be used to enumerate accounts. If the "
+    "email matches an active account, a single-use reset link is issued.",
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest, auth_service: AuthServiceDep
+) -> MessageResponse:
+    await auth_service.request_password_reset(email=payload.email)
+    return MessageResponse(
+        message="If an account exists for that email, we've sent a link to reset your password."
+    )
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Reset a password using a reset link's token",
+    description="Consumes a single-use token issued by /forgot-password. On "
+    "success, all of the user's refresh tokens are revoked, forcing re-login "
+    "on other sessions.",
+)
+async def reset_password(
+    payload: ResetPasswordRequest, auth_service: AuthServiceDep
+) -> MessageResponse:
+    await auth_service.reset_password(raw_token=payload.token, new_password=payload.password)
+    return MessageResponse(message="Password reset successfully. Please log in.")
 
 
 @router.put(

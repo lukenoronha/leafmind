@@ -53,7 +53,6 @@ class ImageNotFoundError(ImageAnalysisError):
         super().__init__("Image not found.", status_code=404)
 
 
-<<<<<<< HEAD
 class PoorImageQualityError(InputValidationError):
     def __init__(self, message: str) -> None:
         super().__init__(
@@ -89,11 +88,11 @@ class LeafOccludedError(InputValidationError):
             "Please upload a clearer image.",
             validation_stage="poor_quality",
         )
-=======
+
+
 class PredictionNotFoundError(ImageAnalysisError):
     def __init__(self) -> None:
         super().__init__("Prediction not found.", status_code=404)
->>>>>>> 2b7f79ba657596b475c109c0541451fda9db94b7
 
 
 class ImageAnalysisService:

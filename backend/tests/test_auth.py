@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from app.services.auth.service import AuthService
+
 VALID_PASSWORD = "Str0ng!Pass"
 
 
@@ -248,3 +250,106 @@ async def test_upload_avatar_requires_authentication(client):
     files = {"file": ("avatar.jpg", _make_jpeg_bytes(), "image/jpeg")}
     response = await client.post("/api/v1/auth/me/avatar", files=files)
     assert response.status_code in (401, 403)
+
+
+async def test_forgot_password_always_returns_success(client):
+    await _register(client)
+
+    known = await client.post(
+        "/api/v1/auth/forgot-password", json={"email": "alice@example.com"}
+    )
+    unknown = await client.post(
+        "/api/v1/auth/forgot-password", json={"email": "nobody@example.com"}
+    )
+    assert known.status_code == 200
+    assert unknown.status_code == 200
+    # Same response either way — must not leak whether the email is registered.
+    assert known.json() == unknown.json()
+
+
+async def test_reset_password_with_valid_token_changes_password(client, db_session_factory):
+    await _register(client)
+
+    async with db_session_factory() as session:
+        auth_service = AuthService(session)
+        raw_token = await auth_service.request_password_reset(email="alice@example.com")
+    assert raw_token is not None
+
+    reset_response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "password": "NewStr0ng!Pass"},
+    )
+    assert reset_response.status_code == 200
+
+    old_login = await _login(client)
+    assert old_login.status_code == 401
+
+    new_login = await _login(client, password="NewStr0ng!Pass")
+    assert new_login.status_code == 200
+
+
+async def test_reset_password_token_is_single_use(client, db_session_factory):
+    await _register(client)
+
+    async with db_session_factory() as session:
+        auth_service = AuthService(session)
+        raw_token = await auth_service.request_password_reset(email="alice@example.com")
+
+    first = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "password": "NewStr0ng!Pass"},
+    )
+    assert first.status_code == 200
+
+    second = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "password": "AnotherStr0ng!Pass"},
+    )
+    assert second.status_code == 401
+
+
+async def test_reset_password_revokes_existing_refresh_tokens(client, db_session_factory):
+    await _register(client)
+    tokens = (await _login(client)).json()
+
+    async with db_session_factory() as session:
+        auth_service = AuthService(session)
+        raw_token = await auth_service.request_password_reset(email="alice@example.com")
+
+    await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": raw_token, "password": "NewStr0ng!Pass"},
+    )
+
+    refresh_attempt = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert refresh_attempt.status_code == 401
+
+
+async def test_reset_password_rejects_unknown_token(client):
+    response = await client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": "not-a-real-token", "password": "NewStr0ng!Pass"},
+    )
+    assert response.status_code == 401
+
+
+async def test_reset_password_rejects_weak_new_password(client, db_session_factory):
+    await _register(client)
+
+    async with db_session_factory() as session:
+        auth_service = AuthService(session)
+        raw_token = await auth_service.request_password_reset(email="alice@example.com")
+
+    response = await client.post(
+        "/api/v1/auth/reset-password", json={"token": raw_token, "password": "weak"}
+    )
+    assert response.status_code == 422
+
+
+async def test_forgot_password_for_unknown_email_issues_no_token(db_session_factory):
+    async with db_session_factory() as session:
+        auth_service = AuthService(session)
+        raw_token = await auth_service.request_password_reset(email="nobody@example.com")
+    assert raw_token is None

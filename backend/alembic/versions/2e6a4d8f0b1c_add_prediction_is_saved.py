@@ -1,7 +1,7 @@
 """add predictions.is_saved
 
 Revision ID: 2e6a4d8f0b1c
-Revises: 7f2a9c5e1d4b
+Revises: af2182701ffe
 Create Date: 2026-07-15
 
 Sprint 8: Saved Reports. Adds a single additive, non-nullable boolean column
@@ -11,6 +11,9 @@ require backfill — the server default applies retroactively. Hand-written
 (matching app.models exactly) for the same reason as prior migrations: no
 live PostgreSQL instance available in this environment to run --autogenerate
 against.
+
+Rebased onto af2182701ffe (predictions.status, added independently off the
+same parent) to keep the migration history linear rather than forked.
 """
 
 from typing import Sequence, Union
@@ -19,7 +22,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "2e6a4d8f0b1c"
-down_revision: Union[str, None] = "7f2a9c5e1d4b"
+down_revision: Union[str, None] = "af2182701ffe"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

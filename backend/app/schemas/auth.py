@@ -57,6 +57,14 @@ class ChangePasswordRequest(_PasswordValidatedModel):
         return value
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(_PasswordValidatedModel):
+    token: str
+
+
 class TokenResponse(BaseModel):
     """Issued on successful login/refresh."""
 

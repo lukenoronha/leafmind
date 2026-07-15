@@ -11,6 +11,7 @@ from app.models.chat_message import ChatMessage, ChatRole
 from app.models.document import Document, DocumentStatus
 from app.models.document_chunk import DocumentChunk
 from app.models.evaluation_run import EvaluationRun, EvaluationRunType
+from app.models.password_reset_token import PasswordResetToken
 from app.models.prediction import Prediction
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
@@ -21,6 +22,7 @@ __all__ = [
     "User",
     "Role",
     "RefreshToken",
+    "PasswordResetToken",
     "UploadedImage",
     "Prediction",
     "ChatMessage",

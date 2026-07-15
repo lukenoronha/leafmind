@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     # --- Default RBAC role assigned to new self-registrations ---
     DEFAULT_USER_ROLE: str = "user"
 
+    # --- Password reset (Sprint 8) ---
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    # Used to build the reset link (`{FRONTEND_BASE_URL}/reset-password?token=...`).
+    # No SMTP/email provider is configured in this project — see
+    # AuthService.request_password_reset for how the link is currently
+    # surfaced (logged, not emailed) until one is wired up.
+    FRONTEND_BASE_URL: str = "http://localhost:5173"
+
     # --- ChromaDB / RAG (Sprint 4: Retrieval-Augmented Generation) ---
     CHROMADB_HOST: str = "localhost"
     CHROMADB_PORT: int = 8001

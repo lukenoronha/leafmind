@@ -6,6 +6,7 @@ here so the same logic can later be reused (e.g. by an admin CLI or a
 background job) without duplicating it in a router.
 """
 
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -28,6 +29,7 @@ from app.core.security import (
     verify_password,
 )
 from app.images.storage import ImageStorage, ImageTooLargeError, UnsupportedImageTypeError
+from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.user import User
@@ -220,6 +222,92 @@ class AuthService:
 
         await self.db.commit()
         logger.info("Password changed for user={}; all sessions revoked", db_user.email)
+
+    async def request_password_reset(self, *, email: str) -> str | None:
+        """Issue a password-reset token if the email matches an active account.
+
+        Always returns normally regardless of whether the email exists —
+        the caller-facing message ("if an account exists...") must not leak
+        which emails are registered, so a lookup miss and a lookup hit look
+        identical to the client. Callers (the router) should not expose the
+        return value to the client for the same reason; it exists so this
+        method is directly unit-testable and so a future real mail sender
+        has something to send without re-deriving the token.
+
+        No SMTP/email provider is configured anywhere in this project (see
+        Settings — there's no EMAIL_* block at all), so the reset link is
+        also logged at INFO level rather than emailed. This is the same
+        limitation the frontend's own comments already document for this
+        flow; wiring a real mail provider is a separate, infra-level change
+        outside this service's scope.
+        """
+        email_normalized = email.strip().lower()
+        result = await self.db.execute(select(User).where(User.email == email_normalized))
+        user = result.scalar_one_or_none()
+
+        if user is None or not user.is_active:
+            logger.info(
+                "Password reset requested for unknown/inactive email={} — no token issued",
+                email_normalized,
+            )
+            return None
+
+        raw_token = secrets.token_urlsafe(32)
+        self.db.add(
+            PasswordResetToken(
+                user_id=user.id,
+                token_hash=hash_token(raw_token),
+                expires_at=datetime.now(UTC)
+                + timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES),
+            )
+        )
+        await self.db.commit()
+
+        reset_link = f"{settings.FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={raw_token}"
+        logger.bind(user_id=str(user.id)).info(
+            "Password reset link for {} (expires in {} min): {}",
+            user.email,
+            settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES,
+            reset_link,
+        )
+        return raw_token
+
+    async def reset_password(self, *, raw_token: str, new_password: str) -> None:
+        validate_password_strength(new_password)
+
+        token_hash = hash_token(raw_token)
+        result = await self.db.execute(
+            select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+        )
+        stored = result.scalar_one_or_none()
+
+        if stored is None or stored.is_used:
+            raise InvalidTokenError("Reset link is invalid or has already been used.")
+
+        if _as_aware_utc(stored.expires_at) < datetime.now(UTC):
+            raise InvalidTokenError("Reset link has expired. Please request a new one.")
+
+        db_user = await self._get_user_or_raise(stored.user_id)
+        db_user.hashed_password = hash_password(new_password)
+
+        stored.is_used = True
+        stored.used_at = datetime.now(UTC)
+
+        # Same rationale as change_password: a working reset link is
+        # equivalent to proving account ownership, so every existing
+        # session should be forced to re-authenticate.
+        tokens_result = await self.db.execute(
+            select(RefreshToken).where(
+                RefreshToken.user_id == db_user.id, RefreshToken.is_revoked.is_(False)
+            )
+        )
+        now = datetime.now(UTC)
+        for token in tokens_result.scalars():
+            token.is_revoked = True
+            token.revoked_at = now
+
+        await self.db.commit()
+        logger.info("Password reset completed for user={}; all sessions revoked", db_user.email)
 
     # ------------------------------------------------------------------
     # Profile management (Sprint 8: User Hub)

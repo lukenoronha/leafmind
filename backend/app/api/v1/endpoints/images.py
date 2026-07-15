@@ -129,4 +129,5 @@ async def set_prediction_saved(
         model_name=prediction.model_name,
         is_saved=prediction.is_saved,
         created_at=prediction.created_at,
+        status=prediction.status.value,
     )

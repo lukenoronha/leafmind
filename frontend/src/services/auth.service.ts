@@ -120,7 +120,6 @@ export const authService = {
     }
   },
 
-  // Stubs for forgot/reset password since the backend doesn't implement them
   forgotPassword: (payload: ForgotPasswordPayload) =>
     apiClient.post<void>('/auth/forgot-password', payload),
 
