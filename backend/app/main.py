@@ -93,6 +93,12 @@ def create_application() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
+        # allow_origins only does exact string matches — it can't express
+        # "any ngrok subdomain", whose hostname rotates on every tunnel
+        # restart. allow_origin_regex is the only mechanism CORSMiddleware
+        # offers for that, so ngrok domains are matched here instead of via
+        # the (silently non-functional) wildcard entries in CORS_ORIGINS.
+        allow_origin_regex=r"https://.*\.ngrok-free\.(app|dev)",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
