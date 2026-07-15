@@ -74,4 +74,16 @@ export const chatStorage = {
   listConversations: (): ChatConversationMeta[] => {
     return readIndex().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   },
+
+  /** Removes every stored conversation and the index — used by the
+   * Settings page's "Clear cache" action. Scans by prefix rather than the
+   * index alone so orphaned conversations (saved without ever reaching the
+   * index) are cleaned up too. */
+  clearAll: () => {
+    const keys = Object.keys(localStorage).filter((key) =>
+      key.startsWith(STORAGE_PREFIX),
+    )
+    keys.forEach((key) => localStorage.removeItem(key))
+    localStorage.removeItem(INDEX_KEY)
+  },
 }

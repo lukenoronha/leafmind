@@ -101,7 +101,7 @@ export function UserHub() {
             <SheetHeader className="sr-only">
               <SheetTitle>Account</SheetTitle>
             </SheetHeader>
-            <div className="px-4 pb-4">
+            <div className="px-3 pb-3">
               <UserHubContent
                 user={user}
                 onNavigate={handleNavigate}
@@ -121,7 +121,7 @@ export function UserHub() {
         <PopoverContent
           side={sidebarState === 'collapsed' ? 'right' : 'top'}
           align="start"
-          className="max-h-[85svh] w-80 overflow-y-auto p-4"
+          className="max-h-[85svh] w-80 overflow-y-auto p-3"
         >
           <UserHubContent
             user={user}

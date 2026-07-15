@@ -24,11 +24,10 @@ function toAuthUser(data: BackendUserResponse): AuthUser {
 }
 
 /**
- * Currently unused by any component — UserPage.tsx (the User Hub's
- * "Profile" destination) is still a placeholder with no edit form or
- * avatar-upload widget, so nothing calls these yet. Both are wired to real
- * backend endpoints (PATCH /auth/me, POST /auth/me/avatar) and ready for
- * whenever that page grows a real form.
+ * Consumed by the Profile page's mutations (hooks/use-profile.ts):
+ * `updateProfile` backs the Profile Information form and `uploadAvatar`
+ * backs the "Change avatar" button, wired to PATCH /auth/me and
+ * POST /auth/me/avatar respectively.
  */
 export const userService = {
   getProfile: async (): Promise<AuthUser> => {

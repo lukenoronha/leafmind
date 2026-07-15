@@ -6,6 +6,7 @@ import type {
   HistoryItem,
   Prediction,
   PredictionReport,
+  PredictionStatus,
   Source,
   UploadedImage,
 } from '@/types/analysis'
@@ -25,6 +26,20 @@ export interface ChatPayload {
   imageId?: string
   message: string
   conversationId?: string
+}
+
+/**
+ * Return shape of sendChatMessage — bundles the assistant's reply with the
+ * backend's conversation_id (see RAGQueryResponse.conversation_id) so the
+ * caller can persist it and pass it back on the next turn. Kept separate
+ * from ChatMessage itself (rather than adding conversationId to that type)
+ * since ChatMessage is also used as a plain stored/exported record
+ * (chat-storage.ts, chat-export.ts) that has no reason to know about
+ * conversation IDs.
+ */
+export interface ChatSendResult {
+  message: ChatMessage
+  conversationId: string
 }
 
 // --- Backend schemas (snake_case) — see backend/app/schemas/images.py, rag.py ---
@@ -53,6 +68,11 @@ interface BackendPredictResponse {
   preprocessing_ms: number
   inference_ms: number
   created_at: string
+  // Additive (Input Validation Layer) — see backend/app/schemas/images.py.
+  // Optional here since older cached/mocked responses may not include them;
+  // toPrediction() below defaults status to 'confident' when absent.
+  status?: PredictionStatus
+  message?: string | null
 }
 
 interface BackendHistoryItem {
@@ -158,6 +178,8 @@ function toPrediction(data: BackendPredictResponse): Prediction {
     preprocessingMs: data.preprocessing_ms,
     inferenceMs: data.inference_ms,
     predictedAt: data.created_at,
+    status: data.status ?? 'confident',
+    message: data.message ?? null,
   }
 }
 
@@ -258,9 +280,14 @@ export const analysisService = {
 
   /**
    * Grounded chat/query. The real backend has no token-by-token streaming —
-   * one request returns the complete answer plus retrieved sources.
+   * one request returns the complete answer plus retrieved sources. Also
+   * returns the backend's conversation_id (RAGQueryResponse.conversation_id)
+   * so the caller can persist it and reuse it on the next turn — omitting
+   * conversation_id on a follow-up request makes the backend start a brand
+   * new conversation, losing multi-turn context server-side even though the
+   * UI still looks continuous (it replays history from localStorage).
    */
-  sendChatMessage: async (payload: ChatPayload): Promise<ChatMessage> => {
+  sendChatMessage: async (payload: ChatPayload): Promise<ChatSendResult> => {
     // Same rationale as predict() above — RAG generation runs the same
     // CPU-bound VLM and can take several minutes without a GPU.
     const { data } = await apiClient.post<BackendRagQueryResponse>(
@@ -273,11 +300,14 @@ export const analysisService = {
       { timeout: 600_000 },
     )
     return {
-      id: data.message.id,
-      role: data.message.role === 'assistant' ? 'assistant' : 'user',
-      content: data.message.content,
-      createdAt: data.message.created_at,
-      sources: data.retrieval.retrieved_chunks.map(toSource),
+      message: {
+        id: data.message.id,
+        role: data.message.role === 'assistant' ? 'assistant' : 'user',
+        content: data.message.content,
+        createdAt: data.message.created_at,
+        sources: data.retrieval.retrieved_chunks.map(toSource),
+      },
+      conversationId: data.conversation_id,
     }
   },
 

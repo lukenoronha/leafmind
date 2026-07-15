@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/providers/ThemeProvider'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { PresentationModeProvider } from '@/providers/PresentationModeProvider'
+import { MotionPreferencesProvider } from '@/providers/MotionPreferencesProvider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -16,11 +17,13 @@ export default function App() {
         <QueryProvider>
           <AuthProvider>
             <PresentationModeProvider>
-              <TooltipProvider>
-                <NetworkStatusBanner />
-                <RouterProvider router={router} />
-                <Toaster />
-              </TooltipProvider>
+              <MotionPreferencesProvider>
+                <TooltipProvider>
+                  <NetworkStatusBanner />
+                  <RouterProvider router={router} />
+                  <Toaster />
+                </TooltipProvider>
+              </MotionPreferencesProvider>
             </PresentationModeProvider>
           </AuthProvider>
         </QueryProvider>

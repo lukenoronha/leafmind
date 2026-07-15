@@ -12,6 +12,15 @@ export interface PredictionCandidate {
   reasoning: string
 }
 
+/**
+ * Outcome of the backend's confidence-validation gate (Input Validation
+ * Layer — see backend/app/models/prediction.py PredictionStatus). Kept as a
+ * union of the two real backend values plus a catch-all `string` so an
+ * unrecognized future value still type-checks instead of breaking callers;
+ * anything other than 'low_confidence' is treated as the confident case.
+ */
+export type PredictionStatus = 'confident' | 'low_confidence' | (string & {})
+
 export interface Prediction {
   id: string
   imageId: string
@@ -22,6 +31,11 @@ export interface Prediction {
   preprocessingMs: number
   inferenceMs: number
   predictedAt: string
+  /** Defaults to 'confident' — see PredictionStatus. */
+  status: PredictionStatus
+  /** Backend-provided explanation, set only when status is 'low_confidence'.
+   * Always use this message as-is rather than inventing new wording. */
+  message: string | null
 }
 
 /**
