@@ -204,12 +204,7 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div
-        className={cn(
-          'mx-auto w-full space-y-3',
-          !isFeedEmpty && 'max-w-160 xl:max-w-170',
-        )}
-      >
+      <div className="mx-auto w-full max-w-160 space-y-3 xl:max-w-170">
         {suggestedTopics.length > 0 ? (
           <SuggestedPrompts
             topics={suggestedTopics}

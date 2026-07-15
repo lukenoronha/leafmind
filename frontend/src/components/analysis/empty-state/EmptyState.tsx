@@ -48,11 +48,6 @@ export function EmptyState({ onFileSelected, disabled }: EmptyStateProps) {
           Show me a leaf. I&apos;ll tell you what it is — and what it&apos;s
           good for.
         </h1>
-        <p className="text-muted-foreground mx-auto max-w-lg text-sm text-balance sm:text-base">
-          Upload a photo and I&apos;ll identify the species, then you can ask me
-          anything about its medicinal uses, safety, or traditional preparation
-          — grounded in cited reference sources.
-        </p>
       </motion.div>
 
       <motion.div variants={item} className="w-full max-w-md">
