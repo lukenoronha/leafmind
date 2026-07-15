@@ -54,7 +54,17 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     candidates: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
     status: Mapped[PredictionStatus] = mapped_column(
-        Enum(PredictionStatus, native_enum=False, length=20),
+        # values_callable makes SQLAlchemy store/read the enum's *value*
+        # ("confident"/"low_confidence" — what's actually in the DB and what
+        # the API contract uses) instead of its default of the member *name*
+        # ("CONFIDENT"/"LOW_CONFIDENCE"), which would reject every existing
+        # row written by the migration's lowercase server_default.
+        Enum(
+            PredictionStatus,
+            native_enum=False,
+            length=20,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
         nullable=False,
         default=PredictionStatus.CONFIDENT,
         server_default="confident",
