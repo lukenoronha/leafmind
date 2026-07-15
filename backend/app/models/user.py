@@ -27,6 +27,13 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
+    # Relative on-disk path (e.g. "uploads/avatars/<uuid>.jpg"), mirroring
+    # UploadedImage.stored_path — NULL until the user uploads one. The
+    # public URL served to clients is derived from this at response time
+    # (see AuthService._build_avatar_url), not stored directly, so it stays
+    # correct if the app's public host/scheme ever changes.
+    avatar_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

@@ -1,8 +1,19 @@
 """End-to-end tests for the Sprint 2 authentication API."""
 
+import io
+
+import numpy as np
 import pytest
+from PIL import Image
 
 VALID_PASSWORD = "Str0ng!Pass"
+
+
+def _make_jpeg_bytes(width=64, height=64) -> bytes:
+    image = np.full((height, width, 3), (200, 120, 60), dtype=np.uint8)
+    buffer = io.BytesIO()
+    Image.fromarray(image, mode="RGB").save(buffer, format="JPEG")
+    return buffer.getvalue()
 
 
 async def _register(client, email="alice@example.com", password=VALID_PASSWORD):
@@ -155,3 +166,85 @@ async def test_change_password_wrong_current_password_rejected(client):
         headers=headers,
     )
     assert response.status_code == 401
+
+
+async def test_me_has_no_avatar_by_default(client):
+    await _register(client)
+    tokens = (await _login(client)).json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    response = await client.get("/api/v1/auth/me", headers=headers)
+    assert response.json()["avatar_url"] is None
+
+
+async def test_update_profile_changes_full_name(client):
+    await _register(client)
+    tokens = (await _login(client)).json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    response = await client.patch(
+        "/api/v1/auth/me", json={"full_name": "Alice Updated"}, headers=headers
+    )
+    assert response.status_code == 200
+    assert response.json()["full_name"] == "Alice Updated"
+
+    me_response = await client.get("/api/v1/auth/me", headers=headers)
+    assert me_response.json()["full_name"] == "Alice Updated"
+
+
+async def test_update_profile_requires_authentication(client):
+    response = await client.patch("/api/v1/auth/me", json={"full_name": "Nobody"})
+    assert response.status_code in (401, 403)
+
+
+async def test_upload_avatar_sets_avatar_url(client):
+    await _register(client)
+    tokens = (await _login(client)).json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    files = {"file": ("avatar.jpg", _make_jpeg_bytes(), "image/jpeg")}
+    response = await client.post("/api/v1/auth/me/avatar", headers=headers, files=files)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["avatar_url"] is not None
+    assert "/static/avatars/" in body["avatar_url"]
+
+    me_response = await client.get("/api/v1/auth/me", headers=headers)
+    assert me_response.json()["avatar_url"] == body["avatar_url"]
+
+
+async def test_upload_avatar_replaces_previous_one(client):
+    await _register(client)
+    tokens = (await _login(client)).json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    first = await client.post(
+        "/api/v1/auth/me/avatar",
+        headers=headers,
+        files={"file": ("first.jpg", _make_jpeg_bytes(), "image/jpeg")},
+    )
+    second = await client.post(
+        "/api/v1/auth/me/avatar",
+        headers=headers,
+        files={"file": ("second.jpg", _make_jpeg_bytes(), "image/jpeg")},
+    )
+    assert first.json()["avatar_url"] != second.json()["avatar_url"]
+
+
+async def test_upload_avatar_rejects_unsupported_content_type(client):
+    await _register(client)
+    tokens = (await _login(client)).json()
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+    response = await client.post(
+        "/api/v1/auth/me/avatar",
+        headers=headers,
+        files={"file": ("avatar.txt", b"not an image", "text/plain")},
+    )
+    assert response.status_code == 400
+
+
+async def test_upload_avatar_requires_authentication(client):
+    files = {"file": ("avatar.jpg", _make_jpeg_bytes(), "image/jpeg")}
+    response = await client.post("/api/v1/auth/me/avatar", files=files)
+    assert response.status_code in (401, 403)

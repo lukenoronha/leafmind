@@ -42,6 +42,7 @@ interface BackendUserResponse {
   is_active: boolean
   is_verified: boolean
   created_at: string
+  avatar_url: string | null
 }
 // -----------------------
 
@@ -64,6 +65,7 @@ export const authService = {
           email: backendUser.email,
           role: backendUser.role.name as UserRole,
           memberSince: backendUser.created_at,
+          avatarUrl: backendUser.avatar_url ?? undefined,
         }
       }
     }
@@ -101,6 +103,7 @@ export const authService = {
         email: backendUser.email,
         role: backendUser.role.name as UserRole,
         memberSince: backendUser.created_at,
+        avatarUrl: backendUser.avatar_url ?? undefined,
       }
     }
   },
