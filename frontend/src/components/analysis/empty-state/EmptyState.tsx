@@ -45,14 +45,9 @@ export function EmptyState({ onFileSelected, disabled }: EmptyStateProps) {
           <Sparkles className="size-6" aria-hidden="true" />
         </div>
         <h1 className="text-foreground text-3xl font-semibold text-balance sm:text-4xl">
-          Show me a leaf. I&apos;ll tell you what it is — and what it&apos;s
+          Show me a leaf. I&apos;ll tell you what it is and what it&apos;s
           good for.
         </h1>
-        <p className="text-muted-foreground mx-auto max-w-md text-sm text-balance">
-          Upload a clear photo of a single medicinal plant leaf to begin
-          analysis. After identification, you can ask questions about its
-          medicinal uses, dosage, precautions, and related information.
-        </p>
       </motion.div>
 
       <motion.div variants={item} className="w-full max-w-md">
