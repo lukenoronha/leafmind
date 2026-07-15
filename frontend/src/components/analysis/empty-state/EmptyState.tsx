@@ -11,7 +11,9 @@ interface EmptyStateProps {
  * First-run view of the New Analysis feed. Doubles as the page's entire
  * greeting while the feed is empty — HomePage hides the "New Analysis"
  * PageHeader in this state, so the headline below is the only heading on
- * screen and is sized/centered accordingly.
+ * screen and is sized/centered accordingly. The disclaimer about AI-generated
+ * responses lives in ChatPanel, just above the input, so it stays visible
+ * once the feed fills up too (matches ChatGPT/Gemini/Claude's placement).
  */
 export function EmptyState({ onFileSelected, disabled }: EmptyStateProps) {
   const prefersReducedMotion = useReducedMotion()
@@ -36,7 +38,7 @@ export function EmptyState({ onFileSelected, disabled }: EmptyStateProps) {
       variants={container}
       initial="hidden"
       animate="show"
-      className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-7 text-center"
+      className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-7 text-center"
     >
       <motion.div variants={item} className="space-y-3">
         <div className="bg-primary/10 text-primary mx-auto flex size-14 items-center justify-center rounded-2xl">
@@ -46,24 +48,11 @@ export function EmptyState({ onFileSelected, disabled }: EmptyStateProps) {
           Show me a leaf. I&apos;ll tell you what it is — and what it&apos;s
           good for.
         </h1>
-        <p className="text-muted-foreground mx-auto max-w-md text-sm text-balance sm:text-base">
-          Upload a photo and I&apos;ll identify the species, then you can ask me
-          anything about its medicinal uses, safety, or traditional preparation
-          — grounded in cited reference sources.
-        </p>
       </motion.div>
 
-      <motion.div variants={item} className="w-full">
+      <motion.div variants={item} className="w-full max-w-md">
         <UploadHeroCard onFileSelected={onFileSelected} disabled={disabled} />
       </motion.div>
-
-      <motion.p
-        variants={item}
-        className="text-muted-foreground mx-auto max-w-sm text-xs leading-relaxed text-balance"
-      >
-        AI-generated responses are grounded using trusted reference sources.
-        Always verify medicinal usage with qualified professionals.
-      </motion.p>
     </motion.div>
   )
 }

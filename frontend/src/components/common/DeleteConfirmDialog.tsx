@@ -19,6 +19,10 @@ interface DeleteConfirmDialogProps {
   /** Defaults to "Delete"/"Deleting..." — override for non-delete confirm actions. */
   confirmLabel?: string
   confirmPendingLabel?: string
+  /** Defaults to "destructive" (irreversible delete). Use "default" for
+   * confirm-then-mutate actions that are disruptive but not destructive,
+   * e.g. a long-running rebuild. */
+  confirmVariant?: 'destructive' | 'default'
 }
 
 export function DeleteConfirmDialog({
@@ -30,6 +34,7 @@ export function DeleteConfirmDialog({
   isPending,
   confirmLabel = 'Delete',
   confirmPendingLabel = 'Deleting...',
+  confirmVariant = 'destructive',
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -41,7 +46,7 @@ export function DeleteConfirmDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
+            variant={confirmVariant}
             disabled={isPending}
             onClick={(event) => {
               event.preventDefault()

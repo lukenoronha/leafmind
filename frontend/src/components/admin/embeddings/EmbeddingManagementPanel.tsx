@@ -12,16 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import {
   useEmbeddingStats,
   useRebuildEmbeddings,
@@ -101,32 +92,19 @@ export function EmbeddingManagementPanel() {
         )}
       </CardContent>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rebuild the vector index?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This re-embeds every document in the knowledge base. It may take
-              several minutes and retrieval quality may be temporarily degraded
-              while it runs.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault()
-                rebuild.mutate(undefined, {
-                  onSuccess: () => setConfirmOpen(false),
-                })
-              }}
-              disabled={rebuild.isPending}
-            >
-              {rebuild.isPending ? 'Rebuilding...' : 'Rebuild'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Rebuild the vector index?"
+        description="This re-embeds every document in the knowledge base. It may take several minutes and retrieval quality may be temporarily degraded while it runs."
+        confirmLabel="Rebuild"
+        confirmPendingLabel="Rebuilding..."
+        confirmVariant="default"
+        isPending={rebuild.isPending}
+        onConfirm={() =>
+          rebuild.mutate(undefined, { onSuccess: () => setConfirmOpen(false) })
+        }
+      />
     </Card>
   )
 }

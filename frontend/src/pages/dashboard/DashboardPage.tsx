@@ -18,7 +18,7 @@ export default function DashboardPage() {
           (title) => (
             <Card key={title}>
               <CardHeader>
-                <CardTitle className="text-base">{title}</CardTitle>
+                <CardTitle>{title}</CardTitle>
                 <CardDescription>Coming soon.</CardDescription>
               </CardHeader>
             </Card>

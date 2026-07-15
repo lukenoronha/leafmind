@@ -14,7 +14,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" description="Manage your preferences." />
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Appearance</CardTitle>
+          <CardTitle>Appearance</CardTitle>
           <CardDescription>
             Toggle between light and dark theme.
           </CardDescription>

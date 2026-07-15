@@ -44,7 +44,7 @@ export function ReportPrintView({
     <div className="print-only">
       <header className="mb-6 flex items-center justify-between border-b border-black pb-4">
         <div className="flex items-center gap-2">
-          <img src={logoSrc} alt="LeafMind" className="h-8 w-8" />
+          <img src={logoSrc} alt="LeafMind" className="size-8" />
           <span className="text-lg font-bold">LeafMind</span>
         </div>
         <div className="text-right text-xs text-neutral-600">

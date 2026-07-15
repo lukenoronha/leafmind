@@ -63,6 +63,7 @@ export const authService = {
           name: backendUser.full_name,
           email: backendUser.email,
           role: backendUser.role.name as UserRole,
+          memberSince: backendUser.created_at,
         }
       }
     }
@@ -99,6 +100,7 @@ export const authService = {
         name: backendUser.full_name,
         email: backendUser.email,
         role: backendUser.role.name as UserRole,
+        memberSince: backendUser.created_at,
       }
     }
   },

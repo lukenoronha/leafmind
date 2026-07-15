@@ -8,6 +8,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { RoleBadge } from '@/components/user-hub/RoleBadge'
 import type { AdminUser } from '@/types/admin'
 
 interface UserProfileSheetProps {
@@ -49,9 +50,7 @@ export function UserProfileSheet({
 
             <div className="space-y-4 px-4">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="capitalize">
-                  {user.role}
-                </Badge>
+                <RoleBadge role={user.role} />
                 <Badge
                   variant={user.status === 'active' ? 'default' : 'outline'}
                   className="capitalize"

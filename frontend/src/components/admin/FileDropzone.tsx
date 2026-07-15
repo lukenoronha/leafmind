@@ -64,7 +64,7 @@ export function FileDropzone({
       }}
       onDragLeave={() => setIsDragging(false)}
       className={cn(
-        'flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors',
+        'flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors',
         isDragging
           ? 'border-primary bg-primary/5'
           : 'border-border hover:border-primary/50 hover:bg-muted/50',

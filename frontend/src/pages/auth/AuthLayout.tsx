@@ -33,10 +33,11 @@ export function AuthLayout({ title, description, children }: AuthLayoutProps) {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="mb-8 flex justify-center"
         >
-          {/* Logo's showWordmark only toggles the separate HTML span it
-           * renders — the "LeafMind" text is also baked into logo.png
-           * itself, so this deliberately doesn't add a second wordmark. */}
-          <Logo showWordmark={false} imgClassName="size-48 drop-shadow-sm" />
+          <Logo
+            className="flex-col gap-3"
+            imgClassName="size-28 drop-shadow-sm"
+            wordmarkClassName="text-2xl"
+          />
         </motion.div>
 
         <motion.div

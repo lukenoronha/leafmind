@@ -24,12 +24,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/common/ErrorState'
 import { EmptyState } from '@/components/common/EmptyState'
+import { RoleBadge } from '@/components/user-hub/RoleBadge'
 import { UserProfileSheet } from '@/components/admin/users/UserProfileSheet'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import {
@@ -199,9 +199,7 @@ export function UserManagementPanel() {
                     </button>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="capitalize">
-                      {user.role}
-                    </Badge>
+                    <RoleBadge role={user.role} />
                   </TableCell>
                   <TableCell>
                     <Switch
