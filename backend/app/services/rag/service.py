@@ -26,6 +26,7 @@ from app.documents.storage import (
 from app.images.preprocessing.steps import load_image_rgb, to_pil_image
 from app.images.storage import ImageStorage
 from app.inference.vlm.pipeline import InferenceError, VLMInferencePipeline
+from app.inference.vlm.schemas import ChatTurn
 from app.models.chat_message import ChatMessage, ChatRole
 from app.models.document import Document, DocumentStatus
 from app.models.document_chunk import DocumentChunk
@@ -139,30 +140,53 @@ class RAGService:
             max_context_chars=max_context_chars,
         )
 
-        rag_messages = build_rag_messages(
-            user_message=message,
-            retrieved_chunks=retrieval.chunks,
-            history=history,
-            predicted_plant=predicted_plant,
-            pil_image=pil_image,
-        )
-
-        inference_pipeline = self._inference or VLMInferencePipeline(
-            max_new_tokens=self._settings.RAG_MAX_NEW_TOKENS
-        )
-
-        try:
-            # generate_from_messages() blocks on CPU-bound model loading/
-            # generation; running it in a worker thread keeps the event loop
-            # free to serve other requests (e.g. login) while this one runs.
-            turn = await asyncio.to_thread(
-                inference_pipeline.generate_from_messages,
-                rag_messages,
-                max_new_tokens=self._settings.RAG_MAX_NEW_TOKENS,
+        if not retrieval.chunks:
+            # No hit cleared RAG_SIMILARITY_THRESHOLD — answer with a fixed,
+            # honest message instead of letting the model guess/hallucinate
+            # from its own pretrained knowledge. Kept as a short-circuit
+            # ahead of generation (RAGService's responsibility) rather than
+            # inside Retriever/prompt_builder, so the retrieval engine itself
+            # is untouched.
+            logger.bind(
+                validation_event="no_relevant_context",
+                user_id=str(user.id),
+                conversation_id=str(conversation_id),
+            ).warning("RAG query had no relevant retrieved context: {!r}", message)
+            turn = ChatTurn(
+                response_text=(
+                    "I couldn't find relevant medicinal plant information for your "
+                    "question. LeafMind currently answers questions related to "
+                    "medicinal plant identification, medicinal uses, cultivation, "
+                    "precautions, and related botanical information."
+                ),
+                model_name="none",
+                inference_ms=0.0,
             )
-        except InferenceError as exc:
-            logger.error("RAG inference failed for user={}: {}", user.email, exc)
-            raise RAGInferenceFailedError(str(exc)) from exc
+        else:
+            rag_messages = build_rag_messages(
+                user_message=message,
+                retrieved_chunks=retrieval.chunks,
+                history=history,
+                predicted_plant=predicted_plant,
+                pil_image=pil_image,
+            )
+
+            inference_pipeline = self._inference or VLMInferencePipeline(
+                max_new_tokens=self._settings.RAG_MAX_NEW_TOKENS
+            )
+
+            try:
+                # generate_from_messages() blocks on CPU-bound model loading/
+                # generation; running it in a worker thread keeps the event loop
+                # free to serve other requests (e.g. login) while this one runs.
+                turn = await asyncio.to_thread(
+                    inference_pipeline.generate_from_messages,
+                    rag_messages,
+                    max_new_tokens=self._settings.RAG_MAX_NEW_TOKENS,
+                )
+            except InferenceError as exc:
+                logger.error("RAG inference failed for user={}: {}", user.email, exc)
+                raise RAGInferenceFailedError(str(exc)) from exc
 
         assistant_message = ChatMessage(
             conversation_id=conversation_id,

@@ -7,7 +7,13 @@ from PIL import Image
 
 
 def _make_jpeg_bytes() -> bytes:
-    image = np.full((200, 300, 3), (60, 140, 50), dtype=np.uint8)
+    # Textured (not flat) so it clears the input-validation layer's blur
+    # heuristic (app.images.preprocessing.content_validation) — a solid
+    # color has near-zero edge variance and would be rejected as "too blurry"
+    # despite not representing a real photo's sharpness at all.
+    rng = np.random.default_rng(0)
+    noise = rng.integers(-20, 20, (200, 300, 3))
+    image = np.clip(np.full((200, 300, 3), (60, 140, 50)) + noise, 0, 255).astype(np.uint8)
     buffer = io.BytesIO()
     Image.fromarray(image, mode="RGB").save(buffer, format="JPEG")
     return buffer.getvalue()

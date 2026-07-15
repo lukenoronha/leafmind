@@ -8,7 +8,6 @@ from fastapi import APIRouter, File, UploadFile, status
 
 from app.api.deps import CurrentUserDep, ImageAnalysisServiceDep
 from app.schemas.images import (
-    CandidateResponse,
     HistoryItem,
     HistoryResponse,
     PredictRequest,
@@ -64,17 +63,7 @@ async def predict(
     prediction = await service.predict(
         user=current_user, image_id=payload.image_id, top_k=payload.top_k
     )
-    return PredictResponse(
-        prediction_id=prediction.id,
-        image_id=prediction.image_id,
-        predicted_label=prediction.predicted_label,
-        confidence=prediction.confidence,
-        candidates=[CandidateResponse(**c) for c in prediction.candidates],
-        model_name=prediction.model_name,
-        preprocessing_ms=prediction.preprocessing_ms,
-        inference_ms=prediction.inference_ms,
-        created_at=prediction.created_at,
-    )
+    return PredictResponse.from_prediction(prediction)
 
 
 @router.get(
@@ -102,6 +91,7 @@ async def get_history(
             confidence=prediction.confidence,
             model_name=prediction.model_name,
             created_at=prediction.created_at,
+            status=prediction.status.value,
         )
         for prediction, image in rows
     ]

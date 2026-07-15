@@ -4,6 +4,7 @@ import { Printer } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { ChatPanel, type FeedItem } from '@/components/analysis/chat/ChatPanel'
+import type { PendingAttachment } from '@/components/analysis/chat/ChatInput'
 import {
   AnalysisInspector,
   type InspectorTab,
@@ -25,6 +26,8 @@ import type { Prediction, PredictionReport } from '@/types/analysis'
  */
 export default function HomePage() {
   const [feed, setFeed] = useState<FeedItem[]>([])
+  const [pendingAttachment, setPendingAttachment] =
+    useState<PendingAttachment | null>(null)
   const [latestPrediction, setLatestPrediction] = useState<Prediction | null>(
     null,
   )
@@ -109,25 +112,22 @@ export default function HomePage() {
     }
   }
 
-  async function handleAttachImage(file: File) {
-    const previewUrl = URL.createObjectURL(file)
-    const imageItemId = crypto.randomUUID()
+  /** Selecting an image (via the "+" button or the empty-state dropzone)
+   * only stages it as an attachment preview above the input — it isn't
+   * uploaded, isn't sent to prediction, and doesn't appear in the
+   * conversation until the user presses Send. */
+  function handleAttachImage(file: File) {
+    setPendingAttachment((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      return { file, previewUrl: URL.createObjectURL(file) }
+    })
+  }
 
-    setFeed((prev) => [
-      ...prev,
-      {
-        type: 'image',
-        id: imageItemId,
-        previewUrl,
-        filename: file.name,
-        sizeBytes: file.size,
-        status: 'uploading',
-        progress: 0,
-      },
-    ])
-    setLatestImageUrl(previewUrl)
-
-    await runAnalysis(imageItemId, file)
+  function handleRemovePendingAttachment() {
+    setPendingAttachment((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      return null
+    })
   }
 
   async function handleReplaceImage(imageItemId: string, file: File) {
@@ -167,6 +167,29 @@ export default function HomePage() {
   }
 
   function handleSendMessage(message: string) {
+    if (pendingAttachment) {
+      const { file, previewUrl } = pendingAttachment
+      const imageItemId = crypto.randomUUID()
+
+      setPendingAttachment(null)
+      setFeed((prev) => [
+        ...prev,
+        {
+          type: 'image',
+          id: imageItemId,
+          previewUrl,
+          filename: file.name,
+          sizeBytes: file.size,
+          status: 'uploading',
+          progress: 0,
+        },
+      ])
+      setLatestImageUrl(previewUrl)
+
+      void runAnalysis(imageItemId, file)
+      return
+    }
+
     void chat.sendMessage(message)
   }
 
@@ -232,12 +255,14 @@ export default function HomePage() {
           feed={combinedFeed}
           isSending={chat.isSending}
           onSendMessage={handleSendMessage}
-          onAttachImage={(file) => void handleAttachImage(file)}
+          onAttachImage={handleAttachImage}
           onReplaceImage={(id, file) => void handleReplaceImage(id, file)}
           onRemoveImage={handleRemoveImage}
           onOpenInspector={handleOpenInspector}
           attachDisabled={isAnalyzing}
           className="min-h-0 flex-1 print:hidden"
+          pendingAttachment={pendingAttachment}
+          onRemovePendingAttachment={handleRemovePendingAttachment}
         />
 
         <AnalysisInspector

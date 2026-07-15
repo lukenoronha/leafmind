@@ -14,10 +14,22 @@ import time
 
 from loguru import logger
 
-from app.inference.clip.classifier import CLIPClassifierUnavailableError, get_trained_clip_classifier
+from app.inference.clip.classifier import (
+    CLIPClassifierUnavailableError,
+    get_trained_clip_classifier,
+)
 from app.inference.vlm.backend import VLMBackend, VLMBackendError, get_vlm_backend
-from app.inference.vlm.prompts import build_chat_messages, build_classification_messages
-from app.inference.vlm.schemas import ChatTurn, ClassificationCandidate, ClassificationResult
+from app.inference.vlm.prompts import (
+    build_chat_messages,
+    build_classification_messages,
+    build_leaf_assessment_messages,
+)
+from app.inference.vlm.schemas import (
+    ChatTurn,
+    ClassificationCandidate,
+    ClassificationResult,
+    LeafAssessment,
+)
 from app.rag.image_retriever import ImageRetriever
 
 
@@ -108,6 +120,33 @@ class VLMInferencePipeline:
 
         return result
 
+    def assess_leaf(self, pil_image) -> LeafAssessment:
+        """Lightweight pre-classification content check: leaf presence, leaf
+        count, and occlusion — in one generation call, reusing the same
+        backend/model as classification rather than a second model.
+
+        Deliberately conservative on parse failure: if the model's response
+        can't be parsed, this assumes the image is a single, unoccluded leaf
+        (i.e. defers to the classification step) rather than blocking a
+        possibly-valid upload on a formatting hiccup in this cheaper check.
+        """
+        messages = build_leaf_assessment_messages(pil_image=pil_image)
+
+        try:
+            raw_response, _, _ = self._backend.generate(messages, max_new_tokens=200)
+        except VLMBackendError as exc:
+            raise InferenceError(str(exc)) from exc
+
+        assessment = self._parse_leaf_assessment(raw_response)
+
+        logger.bind(
+            is_leaf=assessment.is_leaf,
+            leaf_count=assessment.leaf_count,
+            is_heavily_occluded=assessment.is_heavily_occluded,
+        ).info("Leaf assessment completed")
+
+        return assessment
+
     def chat(
         self,
         *,
@@ -195,6 +234,39 @@ class VLMInferencePipeline:
 
         candidates.sort(key=lambda c: c.confidence, reverse=True)
         return candidates
+
+    @staticmethod
+    def _parse_leaf_assessment(raw_response: str) -> LeafAssessment:
+        """Extract the leaf-assessment JSON, defaulting to a permissive
+        (single, unoccluded leaf) result on any parse failure — see
+        `assess_leaf`'s docstring for why this fails open rather than closed."""
+        default = LeafAssessment(is_leaf=True, leaf_count=1, is_heavily_occluded=False)
+
+        json_text = VLMInferencePipeline._extract_json_block(raw_response)
+        if json_text is None:
+            logger.warning("Leaf assessment response had no JSON block: {}", raw_response[:300])
+            return default
+
+        try:
+            payload = json.loads(json_text)
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse leaf assessment JSON: {}", raw_response[:300])
+            return default
+
+        if not isinstance(payload, dict):
+            return default
+
+        try:
+            leaf_count = int(payload.get("leaf_count", 1))
+        except (TypeError, ValueError):
+            leaf_count = 1
+
+        return LeafAssessment(
+            is_leaf=bool(payload.get("is_leaf", True)),
+            leaf_count=max(0, leaf_count),
+            is_heavily_occluded=bool(payload.get("is_heavily_occluded", False)),
+            reasoning=str(payload.get("reasoning", "")).strip(),
+        )
 
     @staticmethod
     def _extract_json_block(text: str) -> str | None:

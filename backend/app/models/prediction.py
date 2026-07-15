@@ -1,9 +1,10 @@
 """Prediction model — the structured result of a single classification inference call."""
 
+import enum
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -12,6 +13,19 @@ from app.models.mixins import GUID, TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from app.models.uploaded_image import UploadedImage
     from app.models.user import User
+
+
+class PredictionStatus(str, enum.Enum):
+    """Outcome of the confidence-validation gate applied after classification.
+
+    `CONFIDENT` predictions cleared `Settings.CONFIDENCE_THRESHOLD`;
+    `LOW_CONFIDENCE` predictions did not (including the model's own
+    "Unknown" fallback label) and should not be presented as a confident
+    species identification, though the attempt is still saved to history.
+    """
+
+    CONFIDENT = "confident"
+    LOW_CONFIDENCE = "low_confidence"
 
 
 class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -39,6 +53,12 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     candidates: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
+    status: Mapped[PredictionStatus] = mapped_column(
+        Enum(PredictionStatus, native_enum=False, length=20),
+        nullable=False,
+        default=PredictionStatus.CONFIDENT,
+    )
+
     model_name: Mapped[str] = mapped_column(String(150), nullable=False)
     raw_response: Mapped[str] = mapped_column(String, nullable=False)
 
@@ -49,4 +69,7 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid only
-        return f"<Prediction id={self.id} label={self.predicted_label!r} confidence={self.confidence}>"
+        return (
+            f"<Prediction id={self.id} label={self.predicted_label!r} "
+            f"confidence={self.confidence} status={self.status.value}>"
+        )

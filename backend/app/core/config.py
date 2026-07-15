@@ -144,6 +144,21 @@ class Settings(BaseSettings):
     PREPROCESS_CONTRAST_CLIP_LIMIT: float = 2.0
     PREPROCESS_SAVE_INTERMEDIATE: bool = False
 
+    # --- Input validation layer (pre-prediction quality/content gating) ---
+    # Laplacian-variance threshold below which an image is considered too
+    # blurry for reliable identification (computed on the decoded, pre-resize
+    # image; lower = blurrier).
+    IMAGE_QUALITY_BLUR_THRESHOLD: float = 60.0
+    # Mean grayscale brightness (0-255) must fall within this range, else the
+    # image is rejected as too dark / overexposed.
+    IMAGE_QUALITY_MIN_BRIGHTNESS: float = 25.0
+    IMAGE_QUALITY_MAX_BRIGHTNESS: float = 230.0
+    # Minimum resolution enforced before any content checks run.
+    IMAGE_QUALITY_MIN_RESOLUTION: int = 128
+    # Below this confidence, a prediction is flagged "low_confidence" instead
+    # of being surfaced as a confident species identification (still saved).
+    CONFIDENCE_THRESHOLD: float = 0.70
+
     # --- Vision-Language Model (Qwen2.5-VL) ---
     VLM_MODEL_NAME: str = "Qwen/Qwen2.5-VL-3B-Instruct"
     VLM_DEVICE: str = "auto"

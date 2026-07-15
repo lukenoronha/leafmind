@@ -6,7 +6,10 @@ import { PredictionResultCard } from '@/components/analysis/chat/PredictionResul
 import { PinnedPlantPill } from '@/components/analysis/chat/PinnedPlantPill'
 import { TypingIndicator } from '@/components/analysis/chat/TypingIndicator'
 import { SuggestedPrompts } from '@/components/analysis/chat/SuggestedPrompts'
-import { ChatInput } from '@/components/analysis/chat/ChatInput'
+import {
+  ChatInput,
+  type PendingAttachment,
+} from '@/components/analysis/chat/ChatInput'
 import { selectSuggestedTopics } from '@/lib/suggested-prompts'
 import type { InspectorTab } from '@/components/analysis/inspector/AnalysisInspector'
 import type { ChatMessage, Prediction } from '@/types/analysis'
@@ -43,6 +46,10 @@ interface ChatPanelProps {
   onOpenInspector: (predictionId: string, tab: InspectorTab) => void
   attachDisabled?: boolean
   className?: string
+  /** Image selected but not yet sent — shown as a preview above the input
+   * (see ChatInput) instead of appearing in the feed until Send is pressed. */
+  pendingAttachment?: PendingAttachment | null
+  onRemovePendingAttachment?: () => void
 }
 
 /**
@@ -63,6 +70,8 @@ export function ChatPanel({
   onOpenInspector,
   attachDisabled,
   className,
+  pendingAttachment,
+  onRemovePendingAttachment,
 }: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const feedContainerRef = useRef<HTMLDivElement>(null)
@@ -224,6 +233,8 @@ export function ChatPanel({
             onAttachImage={onAttachImage}
             attachDisabled={attachDisabled}
             disabled={isSending}
+            pendingAttachment={pendingAttachment}
+            onRemovePendingAttachment={onRemovePendingAttachment}
           />
         </div>
       </div>

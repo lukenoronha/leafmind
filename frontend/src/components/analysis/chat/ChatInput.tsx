@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { Plus, SendHorizontal } from 'lucide-react'
+import { ImageIcon, Plus, SendHorizontal, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { UploadErrorCard } from '@/components/analysis/empty-state/UploadErrorCard'
@@ -7,12 +7,23 @@ import {
   ACCEPTED_IMAGE_TYPES_ACCEPT_ATTR,
   validateLeafImageFile,
 } from '@/lib/image-validation'
+import { formatBytes } from '@/lib/utils'
+
+export interface PendingAttachment {
+  file: File
+  previewUrl: string
+}
 
 interface ChatInputProps {
   onSend: (message: string) => void
   onAttachImage?: (file: File) => void
   attachDisabled?: boolean
   disabled?: boolean
+  /** Image staged via the "+" button or empty-state dropzone, shown as a
+   * preview above the input until Send is pressed — it isn't uploaded or
+   * added to the conversation until then. */
+  pendingAttachment?: PendingAttachment | null
+  onRemovePendingAttachment?: () => void
 }
 
 export function ChatInput({
@@ -20,6 +31,8 @@ export function ChatInput({
   onAttachImage,
   attachDisabled,
   disabled,
+  pendingAttachment,
+  onRemovePendingAttachment,
 }: ChatInputProps) {
   const [value, setValue] = useState('')
   const [attachError, setAttachError] = useState<string | null>(null)
@@ -27,7 +40,8 @@ export function ChatInput({
 
   function submit() {
     const trimmed = value.trim()
-    if (!trimmed || disabled) return
+    if (disabled) return
+    if (!trimmed && !pendingAttachment) return
     onSend(trimmed)
     setValue('')
   }
@@ -53,6 +67,34 @@ export function ChatInput({
 
   return (
     <div className="space-y-1.5">
+      {pendingAttachment ? (
+        <div className="bg-muted/40 flex items-center gap-3 rounded-xl border px-3 py-2">
+          <img
+            src={pendingAttachment.previewUrl}
+            alt={`Selected leaf photo: ${pendingAttachment.file.name}`}
+            className="size-10 shrink-0 rounded-lg object-cover"
+          />
+          <div className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1.5 text-xs">
+            <ImageIcon className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{pendingAttachment.file.name}</span>
+            <span aria-hidden="true">·</span>
+            <span className="shrink-0">
+              {formatBytes(pendingAttachment.file.size)}
+            </span>
+          </div>
+          <Button
+            type="button"
+            size="icon-xs"
+            variant="ghost"
+            className="shrink-0 rounded-full"
+            onClick={onRemovePendingAttachment}
+            aria-label="Remove selected photo"
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
+      ) : null}
+
       <div className="flex items-end gap-2">
         {onAttachImage ? (
           <>
@@ -92,7 +134,9 @@ export function ChatInput({
           size="icon"
           className="shrink-0"
           onClick={submit}
-          disabled={disabled || value.trim().length === 0}
+          disabled={
+            disabled || (value.trim().length === 0 && !pendingAttachment)
+          }
           aria-label="Send message"
         >
           <SendHorizontal className="size-4" />

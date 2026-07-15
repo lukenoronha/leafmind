@@ -34,6 +34,21 @@ class ClassificationResult:
 
 
 @dataclass
+class LeafAssessment:
+    """Structured output of the pre-classification content-validation call.
+
+    Deliberately carries no species information — this call only judges
+    whether the photo is usable for classification at all (leaf presence,
+    leaf count, occlusion), never a plant identity.
+    """
+
+    is_leaf: bool
+    leaf_count: int
+    is_heavily_occluded: bool
+    reasoning: str = ""
+
+
+@dataclass
 class ChatTurn:
     """A single generated chat response, with basic usage/timing metadata."""
 
