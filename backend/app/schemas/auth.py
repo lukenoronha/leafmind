@@ -2,10 +2,14 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.core.security import PasswordPolicyError, validate_password_strength
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class _PasswordValidatedModel(BaseModel):
@@ -77,8 +81,38 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     created_at: datetime
+    avatar_url: str | None = None
 
     model_config = {"from_attributes": True}
+
+    @classmethod
+    def from_user(cls, user: "User", *, request_base_url: str) -> "UserResponse":
+        """Build a response including a computed `avatar_url`.
+
+        `avatar_url` isn't a plain column on `User` (it stores `avatar_path`,
+        a relative on-disk path — see the model's docstring), so plain
+        `model_validate(user)` can't populate it. Every endpoint returning a
+        `UserResponse` should go through this instead of `model_validate`
+        directly, so the field is never silently left `None` for a user who
+        does have an avatar.
+        """
+        from app.services.auth.service import AuthService
+
+        response = cls.model_validate(user)
+        response.avatar_url = AuthService.build_avatar_url(
+            request_base_url=request_base_url, avatar_path=user.avatar_path
+        )
+        return response
+
+
+class UpdateProfileRequest(BaseModel):
+    """`full_name` only — email/password changes go through their own
+    dedicated flows (register-time email is immutable; see
+    ChangePasswordRequest for passwords). Avatar upload is a separate
+    multipart endpoint, not part of this JSON body.
+    """
+
+    full_name: str = Field(..., min_length=1, max_length=150)
 
 
 class MessageResponse(BaseModel):

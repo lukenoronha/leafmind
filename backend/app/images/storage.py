@@ -23,24 +23,45 @@ class ImageTooLargeError(ValueError):
 
 
 class ImageStorage:
-    """Persists uploaded image bytes to a configurable directory on disk."""
+    """Persists uploaded image bytes to a configurable directory on disk.
 
-    def __init__(self, settings: Settings | None = None):
+    Defaults to the leaf-photo upload settings (`UPLOAD_DIR`/
+    `MAX_UPLOAD_SIZE_MB`/`ALLOWED_UPLOAD_CONTENT_TYPES`) so every existing
+    caller is unaffected. Pass the `upload_dir_attr`/`max_size_mb_attr`/
+    `allowed_content_types_attr` overrides to point the same validate/save/
+    read/delete logic at a different on-disk directory and limits — e.g.
+    avatars, which are smaller and served back over HTTP (see
+    `AVATAR_UPLOAD_DIR` and the `/static/avatars` mount in app/main.py)
+    instead of only ever being read back internally like leaf photos.
+    """
+
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        *,
+        upload_dir_attr: str = "UPLOAD_DIR",
+        max_size_mb_attr: str = "MAX_UPLOAD_SIZE_MB",
+        allowed_content_types_attr: str = "ALLOWED_UPLOAD_CONTENT_TYPES",
+    ):
         self._settings = settings or get_settings()
-        self._root = Path(self._settings.UPLOAD_DIR)
+        self._max_size_mb: int = getattr(self._settings, max_size_mb_attr)
+        self._allowed_content_types: list[str] = getattr(
+            self._settings, allowed_content_types_attr
+        )
+        self._root = Path(getattr(self._settings, upload_dir_attr))
         self._root.mkdir(parents=True, exist_ok=True)
 
     def validate_upload(self, *, content_type: str, size_bytes: int) -> None:
-        if content_type not in self._settings.ALLOWED_UPLOAD_CONTENT_TYPES:
+        if content_type not in self._allowed_content_types:
             raise UnsupportedImageTypeError(
                 f"Unsupported content type '{content_type}'. "
-                f"Allowed: {', '.join(self._settings.ALLOWED_UPLOAD_CONTENT_TYPES)}"
+                f"Allowed: {', '.join(self._allowed_content_types)}"
             )
-        max_bytes = self._settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        max_bytes = self._max_size_mb * 1024 * 1024
         if size_bytes > max_bytes:
             raise ImageTooLargeError(
                 f"Image is {size_bytes / (1024 * 1024):.2f}MB; "
-                f"maximum allowed is {self._settings.MAX_UPLOAD_SIZE_MB}MB."
+                f"maximum allowed is {self._max_size_mb}MB."
             )
 
     def save(self, *, raw_bytes: bytes, original_filename: str) -> tuple[Path, str]:

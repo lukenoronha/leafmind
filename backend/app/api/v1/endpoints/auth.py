@@ -4,7 +4,7 @@ Thin HTTP layer over `AuthService` — all business logic (hashing, token
 issuance/rotation, revocation) lives in `app.services.auth.AuthService`.
 """
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, File, Request, UploadFile, status
 
 from app.api.deps import AuthServiceDep, CurrentUserDep
 from app.schemas.auth import (
@@ -15,6 +15,7 @@ from app.schemas.auth import (
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
 )
 
@@ -29,13 +30,15 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     description="Creates a new user account with the default 'user' role. "
     "Passwords are hashed with bcrypt before storage.",
 )
-async def register(payload: RegisterRequest, auth_service: AuthServiceDep) -> UserResponse:
+async def register(
+    payload: RegisterRequest, request: Request, auth_service: AuthServiceDep
+) -> UserResponse:
     user = await auth_service.register(
         email=payload.email,
         password=payload.password,
         full_name=payload.full_name,
     )
-    return UserResponse.model_validate(user)
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
 
 
 @router.post(
@@ -78,8 +81,48 @@ async def refresh(payload: RefreshRequest, auth_service: AuthServiceDep) -> Toke
     summary="Get the current authenticated user",
     description="Returns the profile of the user identified by the bearer access token.",
 )
-async def get_me(current_user: CurrentUserDep) -> UserResponse:
-    return UserResponse.model_validate(current_user)
+async def get_me(current_user: CurrentUserDep, request: Request) -> UserResponse:
+    return UserResponse.from_user(current_user, request_base_url=str(request.base_url))
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    summary="Update the current user's profile",
+    description="Currently supports updating the display name. Email and "
+    "password changes go through their own dedicated flows.",
+)
+async def update_me(
+    payload: UpdateProfileRequest,
+    request: Request,
+    current_user: CurrentUserDep,
+    auth_service: AuthServiceDep,
+) -> UserResponse:
+    user = await auth_service.update_profile(user=current_user, full_name=payload.full_name)
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
+
+
+@router.post(
+    "/me/avatar",
+    response_model=UserResponse,
+    summary="Upload a profile avatar",
+    description="Replaces the current user's avatar image. Accepts JPEG/PNG/WebP "
+    "up to the configured size limit; the previous avatar (if any) is deleted.",
+)
+async def upload_avatar(
+    request: Request,
+    current_user: CurrentUserDep,
+    auth_service: AuthServiceDep,
+    file: UploadFile = File(..., description="JPEG/PNG/WebP avatar image."),
+) -> UserResponse:
+    raw_bytes = await file.read()
+    user = await auth_service.upload_avatar(
+        user=current_user,
+        raw_bytes=raw_bytes,
+        original_filename=file.filename or "avatar.jpg",
+        content_type=file.content_type or "application/octet-stream",
+    )
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
 
 
 @router.put(

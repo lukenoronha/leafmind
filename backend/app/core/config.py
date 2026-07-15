@@ -138,6 +138,27 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    # --- Avatar storage (Sprint 8: User Hub profile editing) ---
+    # Deliberately smaller than the leaf-photo upload limit — an avatar is a
+    # small square thumbnail, not a full-resolution research photo. Served
+    # back over HTTP via a dedicated static mount (see app/main.py), since
+    # (unlike leaf photos) avatars must be directly fetchable by URL for
+    # <img src>.
+    AVATAR_UPLOAD_DIR: str = "uploads/avatars"
+    MAX_AVATAR_UPLOAD_SIZE_MB: int = 5
+    ALLOWED_AVATAR_CONTENT_TYPES: Annotated[list[str], NoDecode] = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    ]
+
+    @field_validator("ALLOWED_AVATAR_CONTENT_TYPES", mode="before")
+    @classmethod
+    def split_avatar_content_types(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
     # --- Image preprocessing pipeline ---
     PREPROCESS_TARGET_SIZE: int = 448
     PREPROCESS_DENOISE_STRENGTH: int = 5

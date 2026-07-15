@@ -18,6 +18,7 @@ from app.api.deps import (
     get_admin_embedding_service,
     get_admin_knowledge_base_service,
     get_admin_monitoring_service,
+    get_auth_service,
     get_dataset_management_service,
     get_developer_service,
     get_evaluation_service,
@@ -33,6 +34,7 @@ from app.models.role import Role, RoleName
 from app.models.user import User
 from app.rag.retriever import Retriever
 from app.services.admin import AdminEmbeddingService, AdminKnowledgeBaseService, AdminMonitoringService, DatasetManagementService
+from app.services.auth import AuthService
 from app.services.developer import DeveloperService
 from app.services.evaluation import EvaluationService
 from app.services.image_analysis import ImageAnalysisService
@@ -100,6 +102,22 @@ async def client(
                 session,
                 storage=ImageStorage(settings),
                 inference=VLMInferencePipeline(backend=fake_vlm_backend),
+            )
+
+    async def _override_get_auth_service():
+        async with db_session_factory() as session:
+            from app.core.config import Settings
+            from app.images.storage import ImageStorage
+
+            settings = Settings(AVATAR_UPLOAD_DIR=str(tmp_path / "avatars"))
+            yield AuthService(
+                session,
+                avatar_storage=ImageStorage(
+                    settings,
+                    upload_dir_attr="AVATAR_UPLOAD_DIR",
+                    max_size_mb_attr="MAX_AVATAR_UPLOAD_SIZE_MB",
+                    allowed_content_types_attr="ALLOWED_AVATAR_CONTENT_TYPES",
+                ),
             )
 
     async def _override_get_rag_service():
@@ -221,6 +239,7 @@ async def client(
 
     app.dependency_overrides[get_db_session] = _override_get_db_session
     app.dependency_overrides[get_image_analysis_service] = _override_get_image_analysis_service
+    app.dependency_overrides[get_auth_service] = _override_get_auth_service
     app.dependency_overrides[get_rag_service] = _override_get_rag_service
     app.dependency_overrides[get_developer_service] = _override_get_developer_service
     app.dependency_overrides[get_evaluation_service] = _override_get_evaluation_service

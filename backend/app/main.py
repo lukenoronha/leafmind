@@ -3,9 +3,12 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -112,6 +115,14 @@ def create_application() -> FastAPI:
     app.add_exception_handler(Exception, unhandled_exception_handler)
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+    # Avatars are the only uploaded files served back over HTTP — leaf
+    # photos and knowledge-base PDFs are only ever read back internally by
+    # the pipeline, never exposed by URL. Mounted outside API_V1_PREFIX
+    # since it's a static asset path, not a versioned API resource.
+    avatar_dir = Path(settings.AVATAR_UPLOAD_DIR)
+    avatar_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/static/avatars", StaticFiles(directory=avatar_dir), name="avatars")
 
     return app
 

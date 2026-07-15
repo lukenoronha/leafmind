@@ -4,7 +4,7 @@ reset password, and (soft-)delete users. Admin-only.
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import AdminUserServiceDep, CurrentUserDep, require_role
 from app.models.role import RoleName
@@ -32,6 +32,7 @@ router = APIRouter(
 async def list_users(
     current_user: CurrentUserDep,
     service: AdminUserServiceDep,
+    request: Request,
     limit: int = 50,
     offset: int = 0,
     role: str | None = None,
@@ -40,8 +41,12 @@ async def list_users(
     users, total = await service.list_users(
         limit=min(limit, 200), offset=max(offset, 0), role=role, is_active=is_active
     )
+    base_url = str(request.base_url)
     return AdminUserListResponse(
-        items=[UserResponse.model_validate(u) for u in users], total=total, limit=limit, offset=offset
+        items=[UserResponse.from_user(u, request_base_url=base_url) for u in users],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -51,10 +56,10 @@ async def list_users(
     summary="Get user detail",
 )
 async def get_user(
-    user_id: uuid.UUID, current_user: CurrentUserDep, service: AdminUserServiceDep
+    user_id: uuid.UUID, current_user: CurrentUserDep, service: AdminUserServiceDep, request: Request
 ) -> UserResponse:
     user = await service.get_user(user_id=user_id)
-    return UserResponse.model_validate(user)
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
 
 
 @router.patch(
@@ -68,11 +73,12 @@ async def update_user(
     payload: AdminUpdateUserRequest,
     current_user: CurrentUserDep,
     service: AdminUserServiceDep,
+    request: Request,
 ) -> UserResponse:
     user = await service.update_user(
         actor=current_user, user_id=user_id, full_name=payload.full_name, role_name=payload.role
     )
-    return UserResponse.model_validate(user)
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
 
 
 @router.patch(
@@ -87,9 +93,10 @@ async def set_user_active(
     payload: AdminSetActiveRequest,
     current_user: CurrentUserDep,
     service: AdminUserServiceDep,
+    request: Request,
 ) -> UserResponse:
     user = await service.set_active(actor=current_user, user_id=user_id, is_active=payload.is_active)
-    return UserResponse.model_validate(user)
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
 
 
 @router.post(
@@ -103,11 +110,12 @@ async def reset_password(
     payload: AdminResetPasswordRequest,
     current_user: CurrentUserDep,
     service: AdminUserServiceDep,
+    request: Request,
 ) -> UserResponse:
     user = await service.reset_password(
         actor=current_user, user_id=user_id, new_password=payload.new_password
     )
-    return UserResponse.model_validate(user)
+    return UserResponse.from_user(user, request_base_url=str(request.base_url))
 
 
 @router.delete(

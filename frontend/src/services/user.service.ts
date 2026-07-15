@@ -9,6 +9,7 @@ interface BackendUserResponse {
   is_active: boolean
   is_verified: boolean
   created_at: string
+  avatar_url: string | null
 }
 
 function toAuthUser(data: BackendUserResponse): AuthUser {
@@ -17,17 +18,17 @@ function toAuthUser(data: BackendUserResponse): AuthUser {
     name: data.full_name,
     email: data.email,
     role: data.role.name as AuthUser['role'],
+    memberSince: data.created_at,
+    avatarUrl: data.avatar_url ?? undefined,
   }
 }
 
 /**
- * Currently unused by any component (UserPage.tsx is a placeholder — see
- * its own comment). `getProfile` is wired to the real `/auth/me` endpoint
- * (same one `authService.getCurrentUser` uses) so it's usable once a real
- * profile page is built. `updateProfile` has no backend equivalent at all
- * (no PATCH /auth/me, no avatar_url field anywhere) and will 404 if ever
- * called — kept only as a documented placeholder for a future backend
- * feature, not a working call.
+ * Currently unused by any component — UserPage.tsx (the User Hub's
+ * "Profile" destination) is still a placeholder with no edit form or
+ * avatar-upload widget, so nothing calls these yet. Both are wired to real
+ * backend endpoints (PATCH /auth/me, POST /auth/me/avatar) and ready for
+ * whenever that page grows a real form.
  */
 export const userService = {
   getProfile: async (): Promise<AuthUser> => {
@@ -35,9 +36,21 @@ export const userService = {
     return toAuthUser(data)
   },
 
-  /** No backend route exists for this (`PATCH /users/me` was never
-   * implemented server-side, and `UserResponse` has no `avatar_url` field).
-   * Will 404 if ever called. */
-  updateProfile: (payload: Partial<Pick<AuthUser, 'name' | 'avatarUrl'>>) =>
-    apiClient.patch<AuthUser>('/users/me', payload),
+  updateProfile: async (payload: { name: string }): Promise<AuthUser> => {
+    const { data } = await apiClient.patch<BackendUserResponse>('/auth/me', {
+      full_name: payload.name,
+    })
+    return toAuthUser(data)
+  },
+
+  uploadAvatar: async (file: File): Promise<AuthUser> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { data } = await apiClient.post<BackendUserResponse>(
+      '/auth/me/avatar',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+    return toAuthUser(data)
+  },
 }

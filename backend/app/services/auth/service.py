@@ -8,6 +8,7 @@ background job) without duplicating it in a router.
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from loguru import logger
 from sqlalchemy import select
@@ -26,6 +27,7 @@ from app.core.security import (
     validate_password_strength,
     verify_password,
 )
+from app.images.storage import ImageStorage, ImageTooLargeError, UnsupportedImageTypeError
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role
 from app.models.user import User
@@ -72,11 +74,26 @@ class RoleNotConfiguredError(AuthError):
         super().__init__(f"Role '{role_name}' is not configured.", status_code=500)
 
 
+class InvalidAvatarUploadError(AuthError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message, status_code=400)
+
+
+class UserNotFoundError(AuthError):
+    def __init__(self) -> None:
+        super().__init__("User not found.", status_code=404)
+
+
 class AuthService:
     """Stateless service — takes a DB session per call via the constructor."""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, *, avatar_storage: ImageStorage | None = None):
         self.db = db
+        self._avatar_storage = avatar_storage or ImageStorage(
+            upload_dir_attr="AVATAR_UPLOAD_DIR",
+            max_size_mb_attr="MAX_AVATAR_UPLOAD_SIZE_MB",
+            allowed_content_types_attr="ALLOWED_AVATAR_CONTENT_TYPES",
+        )
 
     # ------------------------------------------------------------------
     # Registration
@@ -184,13 +201,16 @@ class AuthService:
 
         validate_password_strength(new_password)
 
-        user.hashed_password = hash_password(new_password)
+        # Re-fetched in this service's own session — see update_profile's
+        # comment on why the caller-supplied `user` isn't mutated directly.
+        db_user = await self._get_user_or_raise(user.id)
+        db_user.hashed_password = hash_password(new_password)
 
         # Revoke all existing refresh tokens so a compromised session can't
         # survive a password change.
         result = await self.db.execute(
             select(RefreshToken).where(
-                RefreshToken.user_id == user.id, RefreshToken.is_revoked.is_(False)
+                RefreshToken.user_id == db_user.id, RefreshToken.is_revoked.is_(False)
             )
         )
         now = datetime.now(UTC)
@@ -199,7 +219,73 @@ class AuthService:
             token.revoked_at = now
 
         await self.db.commit()
-        logger.info("Password changed for user={}; all sessions revoked", user.email)
+        logger.info("Password changed for user={}; all sessions revoked", db_user.email)
+
+    # ------------------------------------------------------------------
+    # Profile management (Sprint 8: User Hub)
+    # ------------------------------------------------------------------
+
+    async def update_profile(self, *, user: User, full_name: str) -> User:
+        # Re-fetched in this service's own session rather than mutating the
+        # caller-supplied `user` directly — that instance may have been
+        # loaded by `get_current_user` in a different session (e.g. the test
+        # client's dependency overrides each construct their own session per
+        # service), so writing through it directly can silently commit
+        # against a detached/foreign session. Mirrors AdminUserService's
+        # update_user, which re-fetches for the same reason.
+        db_user = await self._get_user_or_raise(user.id)
+        db_user.full_name = full_name.strip()
+        await self.db.commit()
+        await self.db.refresh(db_user, attribute_names=["role"])
+        logger.info("Profile updated for user={}", db_user.email)
+        return db_user
+
+    async def upload_avatar(
+        self, *, user: User, raw_bytes: bytes, original_filename: str, content_type: str
+    ) -> User:
+        try:
+            self._avatar_storage.validate_upload(
+                content_type=content_type, size_bytes=len(raw_bytes)
+            )
+            stored_path, _checksum = self._avatar_storage.save(
+                raw_bytes=raw_bytes, original_filename=original_filename
+            )
+        except (UnsupportedImageTypeError, ImageTooLargeError) as exc:
+            logger.warning("Avatar upload rejected for user={}: {}", user.email, exc)
+            raise InvalidAvatarUploadError(str(exc)) from exc
+
+        db_user = await self._get_user_or_raise(user.id)
+        previous_path = db_user.avatar_path
+        db_user.avatar_path = str(stored_path)
+        await self.db.commit()
+        await self.db.refresh(db_user, attribute_names=["role"])
+
+        # Best-effort cleanup of the replaced file — a failure here shouldn't
+        # fail the request, since the new avatar is already persisted and the
+        # user-visible outcome (their avatar changed) already succeeded.
+        if previous_path:
+            try:
+                self._avatar_storage.delete(previous_path)
+            except OSError:
+                logger.warning("Could not delete previous avatar at {}", previous_path)
+
+        logger.info("Avatar updated for user={}", db_user.email)
+        return db_user
+
+    @staticmethod
+    def build_avatar_url(*, request_base_url: str, avatar_path: str | None) -> str | None:
+        """Derive the public URL for a stored avatar path, or None if unset.
+
+        Built from the request's own base URL (rather than a fixed
+        "public host" setting, which doesn't exist in Settings) so this
+        stays correct across localhost, LAN, and ngrok-tunneled deployments
+        alike — see the `*.ngrok-free.{app,dev}` CORS allowance in
+        app/main.py for why a fixed host can't be assumed here.
+        """
+        if not avatar_path:
+            return None
+        filename = Path(avatar_path).name
+        return f"{request_base_url.rstrip('/')}/static/avatars/{filename}"
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -211,6 +297,12 @@ class AuthService:
         if role is None:
             raise RoleNotConfiguredError(role_name)
         return role
+
+    async def _get_user_or_raise(self, user_id: uuid.UUID) -> User:
+        user = await self.db.get(User, user_id)
+        if user is None:
+            raise UserNotFoundError()
+        return user
 
     async def _issue_token_pair(self, user: User) -> TokenResponse:
         access_token, _ = create_access_token(user_id=user.id, role=user.role.name)
