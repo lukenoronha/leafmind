@@ -4,7 +4,11 @@ import enum
 import uuid
 from typing import TYPE_CHECKING
 
+<<<<<<< HEAD
 from sqlalchemy import JSON, Enum, Float, ForeignKey, Integer, String
+=======
+from sqlalchemy import JSON, Boolean, Float, ForeignKey, Integer, String
+>>>>>>> 2b7f79ba657596b475c109c0541451fda9db94b7
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -53,10 +57,15 @@ class Prediction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     candidates: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
+<<<<<<< HEAD
     status: Mapped[PredictionStatus] = mapped_column(
         Enum(PredictionStatus, native_enum=False, length=20),
         nullable=False,
         default=PredictionStatus.CONFIDENT,
+=======
+    is_saved: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false", index=True
+>>>>>>> 2b7f79ba657596b475c109c0541451fda9db94b7
     )
 
     model_name: Mapped[str] = mapped_column(String(150), nullable=False)

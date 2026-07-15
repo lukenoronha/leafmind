@@ -129,3 +129,83 @@ async def test_history_is_scoped_per_user(client, auth_headers):
 
     response = await client.get("/api/v1/history", headers=other_headers)
     assert response.json()["total"] == 0
+
+
+async def test_history_items_default_to_not_saved(client, auth_headers):
+    upload_response = await _upload(client, auth_headers)
+    image_id = upload_response.json()["image_id"]
+    await client.post(
+        "/api/v1/predict", headers=auth_headers, json={"image_id": image_id, "top_k": 1}
+    )
+
+    response = await client.get("/api/v1/history", headers=auth_headers)
+    assert response.json()["items"][0]["is_saved"] is False
+
+
+async def test_save_prediction_marks_it_saved_and_filters_history(client, auth_headers):
+    upload_response = await _upload(client, auth_headers)
+    image_id = upload_response.json()["image_id"]
+    predict_response = await client.post(
+        "/api/v1/predict", headers=auth_headers, json={"image_id": image_id, "top_k": 1}
+    )
+    prediction_id = predict_response.json()["prediction_id"]
+
+    save_response = await client.patch(
+        f"/api/v1/predictions/{prediction_id}/save",
+        headers=auth_headers,
+        json={"is_saved": True},
+    )
+    assert save_response.status_code == 200
+    assert save_response.json()["is_saved"] is True
+
+    saved_history = await client.get(
+        "/api/v1/history", headers=auth_headers, params={"saved": True}
+    )
+    assert saved_history.json()["total"] == 1
+    assert saved_history.json()["items"][0]["prediction_id"] == prediction_id
+
+    unsave_response = await client.patch(
+        f"/api/v1/predictions/{prediction_id}/save",
+        headers=auth_headers,
+        json={"is_saved": False},
+    )
+    assert unsave_response.json()["is_saved"] is False
+
+    saved_history_after_unsave = await client.get(
+        "/api/v1/history", headers=auth_headers, params={"saved": True}
+    )
+    assert saved_history_after_unsave.json()["total"] == 0
+
+
+async def test_save_prediction_requires_ownership(client, auth_headers):
+    upload_response = await _upload(client, auth_headers)
+    image_id = upload_response.json()["image_id"]
+    predict_response = await client.post(
+        "/api/v1/predict", headers=auth_headers, json={"image_id": image_id, "top_k": 1}
+    )
+    prediction_id = predict_response.json()["prediction_id"]
+
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "intruder@example.com", "password": "Str0ng!Pass", "full_name": "Intruder"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login", json={"email": "intruder@example.com", "password": "Str0ng!Pass"}
+    )
+    other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = await client.patch(
+        f"/api/v1/predictions/{prediction_id}/save",
+        headers=other_headers,
+        json={"is_saved": True},
+    )
+    assert response.status_code == 404
+
+
+async def test_save_unknown_prediction_returns_404(client, auth_headers):
+    response = await client.patch(
+        "/api/v1/predictions/00000000-0000-0000-0000-000000000000/save",
+        headers=auth_headers,
+        json={"is_saved": True},
+    )
+    assert response.status_code == 404

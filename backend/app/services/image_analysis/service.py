@@ -53,6 +53,7 @@ class ImageNotFoundError(ImageAnalysisError):
         super().__init__("Image not found.", status_code=404)
 
 
+<<<<<<< HEAD
 class PoorImageQualityError(InputValidationError):
     def __init__(self, message: str) -> None:
         super().__init__(
@@ -88,6 +89,11 @@ class LeafOccludedError(InputValidationError):
             "Please upload a clearer image.",
             validation_stage="poor_quality",
         )
+=======
+class PredictionNotFoundError(ImageAnalysisError):
+    def __init__(self) -> None:
+        super().__init__("Prediction not found.", status_code=404)
+>>>>>>> 2b7f79ba657596b475c109c0541451fda9db94b7
 
 
 class ImageAnalysisService:
@@ -318,23 +324,41 @@ class ImageAnalysisService:
         return PredictionStatus.CONFIDENT
 
     async def get_history(
-        self, *, user: User, limit: int = 20, offset: int = 0
+        self, *, user: User, limit: int = 20, offset: int = 0, saved_only: bool = False
     ) -> tuple[list[tuple[Prediction, UploadedImage]], int]:
+        filters = [Prediction.user_id == user.id]
+        if saved_only:
+            filters.append(Prediction.is_saved.is_(True))
+
         count_result = await self.db.execute(
-            select(func.count(Prediction.id)).where(Prediction.user_id == user.id)
+            select(func.count(Prediction.id)).where(*filters)
         )
         total = count_result.scalar_one()
 
         result = await self.db.execute(
             select(Prediction, UploadedImage)
             .join(UploadedImage, Prediction.image_id == UploadedImage.id)
-            .where(Prediction.user_id == user.id)
+            .where(*filters)
             .order_by(Prediction.created_at.desc())
             .limit(limit)
             .offset(offset)
         )
         rows = [(prediction, image) for prediction, image in result.all()]
         return rows, total
+
+    async def set_saved(
+        self, *, user: User, prediction_id: uuid.UUID, is_saved: bool
+    ) -> tuple[Prediction, UploadedImage]:
+        prediction = await self.db.get(Prediction, prediction_id)
+        if prediction is None or prediction.user_id != user.id:
+            raise PredictionNotFoundError()
+
+        prediction.is_saved = is_saved
+        await self.db.commit()
+        await self.db.refresh(prediction)
+
+        image = await self.db.get(UploadedImage, prediction.image_id)
+        return prediction, image
 
     async def _get_owned_image(self, *, user: User, image_id: uuid.UUID) -> UploadedImage:
         image = await self.db.get(UploadedImage, image_id)

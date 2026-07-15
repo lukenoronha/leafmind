@@ -76,6 +76,7 @@ class HistoryItem(BaseModel):
     predicted_label: str
     confidence: float
     model_name: str
+    is_saved: bool
     created_at: datetime
     status: str = "confident"
 
@@ -85,3 +86,7 @@ class HistoryResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class UpdatePredictionSaveRequest(BaseModel):
+    is_saved: bool
