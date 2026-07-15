@@ -8,14 +8,20 @@ them apart avoids bloating `AuthService` with admin-only concerns and
 mirrors the `ImageAnalysisService`/`RAGService` split — one service per
 bounded concern, all constructed the same way.
 
-Deletion is intentionally soft-delete only (`is_active = False`): every FK
-referencing `users.id` (`refresh_tokens`, `uploaded_images`, `predictions`,
-`chat_messages`, `documents`) is `ondelete=CASCADE`, so a hard delete would
-destroy a user's entire prediction/chat/document history — undesirable for
-a system whose purpose is persisted classification records. Deactivation
-already fully locks a user out via the existing `InactiveUserError` checks
-in `AuthService.login()` and `app.api.deps.get_current_user()` — no new
-enforcement logic was needed for it to take effect.
+`delete_user()` is soft-delete only (`is_active = False`) and is the
+default/primary action: every FK referencing `users.id` (`refresh_tokens`,
+`uploaded_images`, `predictions`, `chat_messages`, `documents`) is
+`ondelete=CASCADE`, so a hard delete destroys a user's entire prediction/
+chat/document history — usually undesirable for a system whose purpose is
+persisted classification records. Deactivation already fully locks a user
+out via the existing `InactiveUserError` checks in `AuthService.login()`
+and `app.api.deps.get_current_user()` — no new enforcement logic was
+needed for it to take effect.
+
+`hard_delete_user()` is a separate, explicit action for the cases where
+the history genuinely should not survive (spam/test accounts, erasure
+requests) — it permanently removes the row and lets the CASCADE take out
+everything that references it.
 """
 
 import uuid
@@ -138,6 +144,36 @@ class AdminUserService:
         See module docstring for why this never hard-deletes the row.
         """
         return await self.set_active(actor=actor, user_id=user_id, is_active=False)
+
+    async def hard_delete_user(self, *, actor: User, user_id: uuid.UUID) -> None:
+        """Permanently deletes the user row and, via ON DELETE CASCADE,
+        every refresh token/uploaded image/prediction/chat message/document
+        that references it. Irreversible — see module docstring for why
+        `delete_user()` above is the soft-delete used by default; this
+        exists as an explicit, separate admin action for cases (spam/test
+        accounts, GDPR-style erasure requests) where the history genuinely
+        should not survive.
+        """
+        user = await self.get_user(user_id=user_id)
+
+        if user.id == actor.id:
+            raise CannotModifySelfError("Admins cannot delete their own account.")
+
+        user_email = user.email
+
+        await record_activity(
+            self.db,
+            actor_user_id=actor.id,
+            action="user.hard_delete",
+            target_type="user",
+            target_id=str(user.id),
+            details={"email": user_email},
+        )
+
+        await self.db.delete(user)
+        await self.db.commit()
+
+        logger.warning("Admin {} permanently deleted user {}", actor.email, user_email)
 
     async def reset_password(
         self, *, actor: User, user_id: uuid.UUID, new_password: str

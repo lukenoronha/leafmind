@@ -56,11 +56,28 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: (userId: string) => adminService.deleteUser(userId),
     onSuccess: () => {
-      toast.success('User deleted.')
+      // This endpoint only deactivates the account (see admin.service.ts) —
+      // history is preserved, not removed.
+      toast.success('User deactivated.')
       void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY })
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Unable to delete user.'))
+      toast.error(getApiErrorMessage(error, 'Unable to deactivate user.'))
+    },
+  })
+}
+
+export function useHardDeleteUser() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (userId: string) => adminService.hardDeleteUser(userId),
+    onSuccess: () => {
+      toast.success('User permanently deleted.')
+      void queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY })
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Unable to permanently delete user.'))
     },
   })
 }
