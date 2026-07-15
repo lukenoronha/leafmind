@@ -91,3 +91,31 @@ class RAGStatusResponse(BaseModel):
     vector_count: int
     embedding_model: str
     collection_name: str
+
+
+class PersistedSourceResponse(BaseModel):
+    """Shape of one entry in `ChatMessage.retrieved_sources` (see the model's
+    docstring) — a subset of `RetrievedChunkResponse` without `text`, since
+    only chunk/document identity + score is persisted, not the retrieved
+    text itself.
+    """
+
+    chunk_id: str
+    document_id: str
+    document_name: str
+    page_number: int | None
+    chapter: str | None
+    score: float
+
+
+class ConversationMessageResponse(BaseModel):
+    id: uuid.UUID
+    role: str
+    content: str
+    created_at: datetime
+    sources: list[PersistedSourceResponse] = Field(default_factory=list)
+
+
+class ConversationResponse(BaseModel):
+    prediction_id: uuid.UUID
+    messages: list[ConversationMessageResponse]

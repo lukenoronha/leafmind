@@ -7,10 +7,15 @@ alongside every answer so the frontend can visualize what grounded a
 response.
 """
 
+import uuid
+
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUserDep, RAGServiceDep
 from app.schemas.rag import (
+    ConversationMessageResponse,
+    ConversationResponse,
+    PersistedSourceResponse,
     RAGMessageResponse,
     RAGQueryRequest,
     RAGQueryResponse,
@@ -71,6 +76,42 @@ async def query(
                 for c in retrieval.chunks
             ],
         ),
+    )
+
+
+@router.get(
+    "/conversations/{prediction_id}",
+    response_model=ConversationResponse,
+    summary="Reopen a conversation by prediction",
+    description="Returns every persisted chat turn tied to the given prediction, "
+    "oldest first — lets a Chat History entry be reopened even if the "
+    "browser's local copy was cleared. Only turns sent after this field was "
+    "introduced have a recorded prediction_id, so older conversations return "
+    "an empty list rather than an error.",
+)
+async def get_conversation(
+    prediction_id: uuid.UUID,
+    current_user: CurrentUserDep,
+    service: RAGServiceDep,
+) -> ConversationResponse:
+    messages = await service.get_conversation_by_prediction(
+        user=current_user, prediction_id=prediction_id
+    )
+    return ConversationResponse(
+        prediction_id=prediction_id,
+        messages=[
+            ConversationMessageResponse(
+                id=msg.id,
+                role=msg.role.value,
+                content=msg.content,
+                created_at=msg.created_at,
+                sources=[
+                    PersistedSourceResponse(**source)
+                    for source in (msg.retrieved_sources or [])
+                ],
+            )
+            for msg in messages
+        ],
     )
 
 

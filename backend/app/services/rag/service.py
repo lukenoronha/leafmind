@@ -122,12 +122,19 @@ class RAGService:
             raw_bytes = self._image_storage.read(image.stored_path)
             pil_image = to_pil_image(load_image_rgb(raw_bytes))
 
-        predicted_plant = await self._latest_prediction_label(image_id) if image_id else None
+        latest_prediction = await self._latest_prediction(image_id) if image_id else None
+        predicted_plant = (
+            f"{latest_prediction.predicted_label} (confidence {latest_prediction.confidence:.2f})"
+            if latest_prediction
+            else None
+        )
+        prediction_id = latest_prediction.id if latest_prediction else None
 
         user_message = ChatMessage(
             conversation_id=conversation_id,
             user_id=user.id,
             image_id=image_id,
+            prediction_id=prediction_id,
             role=ChatRole.USER,
             content=message,
         )
@@ -192,6 +199,7 @@ class RAGService:
             conversation_id=conversation_id,
             user_id=user.id,
             image_id=image_id,
+            prediction_id=prediction_id,
             role=ChatRole.ASSISTANT,
             content=turn.response_text,
             model_name=turn.model_name,
@@ -226,6 +234,30 @@ class RAGService:
 
         return conversation_id, assistant_message, retrieval
 
+    # --- Conversation reopening (Sprint 8: Chat History) --------------------------
+
+    async def get_conversation_by_prediction(
+        self, *, user: User, prediction_id: uuid.UUID
+    ) -> list[ChatMessage]:
+        """All chat turns tied to a prediction, ordered oldest-first.
+
+        Powers reopening a conversation from Chat History — the frontend
+        already groups conversations by prediction ID client-side (see
+        chat-storage.ts); this lets that same grouping be reconstructed from
+        the server for a browser that no longer has the localStorage copy.
+        Only turns with a recorded `prediction_id` are returned — messages
+        persisted before this field existed are not retroactively linkable
+        (see the model's docstring) and simply won't appear here.
+        """
+        result = await self.db.execute(
+            select(ChatMessage)
+            .where(
+                ChatMessage.prediction_id == prediction_id, ChatMessage.user_id == user.id
+            )
+            .order_by(ChatMessage.created_at.asc())
+        )
+        return list(result.scalars().all())
+
     async def _load_history(
         self, *, user: User, conversation_id: uuid.UUID
     ) -> list[tuple[str, str]]:
@@ -237,17 +269,14 @@ class RAGService:
         )
         return [(msg.role.value, msg.content) for msg in result.scalars().all()]
 
-    async def _latest_prediction_label(self, image_id: uuid.UUID) -> str | None:
+    async def _latest_prediction(self, image_id: uuid.UUID) -> Prediction | None:
         result = await self.db.execute(
             select(Prediction)
             .where(Prediction.image_id == image_id)
             .order_by(Prediction.created_at.desc())
             .limit(1)
         )
-        prediction = result.scalar_one_or_none()
-        if prediction is None:
-            return None
-        return f"{prediction.predicted_label} (confidence {prediction.confidence:.2f})"
+        return result.scalar_one_or_none()
 
     # --- Document lifecycle -------------------------------------------------------
 

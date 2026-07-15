@@ -111,6 +111,28 @@ interface BackendPredictionReportResponse {
   related_knowledge: BackendRelatedKnowledgeChunk[]
 }
 
+interface BackendPersistedSource {
+  chunk_id: string
+  document_id: string
+  document_name: string
+  page_number: number | null
+  chapter: string | null
+  score: number
+}
+
+interface BackendConversationMessage {
+  id: string
+  role: string
+  content: string
+  created_at: string
+  sources: BackendPersistedSource[]
+}
+
+interface BackendConversationResponse {
+  prediction_id: string
+  messages: BackendConversationMessage[]
+}
+
 function toUploadedImage(data: BackendUploadResponse): UploadedImage {
   return {
     id: data.image_id,
@@ -257,6 +279,41 @@ export const analysisService = {
       createdAt: data.message.created_at,
       sources: data.retrieval.retrieved_chunks.map(toSource),
     }
+  },
+
+  /**
+   * Reopens a conversation by prediction ID from the server, for a browser
+   * whose localStorage copy (see chat-storage.ts) was cleared or never
+   * existed. Only turns sent after the backend started recording
+   * prediction_id are linkable this way — older conversations return an
+   * empty array rather than an error. Not called by any component yet;
+   * ready for whenever Chat History grows a "reopen from server" fallback.
+   *
+   * Note: unlike sendChatMessage's live sources, the backend only persists
+   * chunk/document identity + score for a past turn, not the retrieved
+   * text itself — `source.text` is always `''` here. A citation-jump UI
+   * that relies on the excerpt text (e.g. SourcesPanel) would need that
+   * backfilled server-side before this is wired into a real component.
+   */
+  getConversation: async (predictionId: string): Promise<ChatMessage[]> => {
+    const { data } = await apiClient.get<BackendConversationResponse>(
+      `/rag/conversations/${predictionId}`,
+    )
+    return data.messages.map((message) => ({
+      id: message.id,
+      role: message.role === 'assistant' ? 'assistant' : 'user',
+      content: message.content,
+      createdAt: message.created_at,
+      sources: message.sources.map((source) => ({
+        chunkId: source.chunk_id,
+        documentId: source.document_id,
+        documentName: source.document_name,
+        pageNumber: source.page_number,
+        chapter: source.chapter,
+        score: source.score,
+        text: '',
+      })),
+    }))
   },
 
   /** Related knowledge-base excerpts + disclaimer for a prediction's report. */

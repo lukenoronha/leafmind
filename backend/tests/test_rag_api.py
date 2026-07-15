@@ -166,3 +166,78 @@ async def test_rag_reindex_single_document(client, auth_headers):
     body = response.json()
     assert len(body["reindexed"]) == 1
     assert body["reindexed"][0]["status"] == "indexed"
+
+
+async def test_get_conversation_by_prediction_returns_grounded_turns(client, auth_headers):
+    files = {"file": ("leaf.jpg", _make_jpeg_bytes(), "image/jpeg")}
+    upload = await client.post("/api/v1/upload", headers=auth_headers, files=files)
+    image_id = upload.json()["image_id"]
+
+    predict = await client.post(
+        "/api/v1/predict", headers=auth_headers, json={"image_id": image_id, "top_k": 1}
+    )
+    prediction_id = predict.json()["prediction_id"]
+
+    await client.post(
+        "/api/v1/rag/query",
+        headers=auth_headers,
+        json={"message": "What can you tell me about this leaf?", "image_id": image_id},
+    )
+
+    response = await client.get(
+        f"/api/v1/rag/conversations/{prediction_id}", headers=auth_headers
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["prediction_id"] == prediction_id
+    assert len(body["messages"]) == 2
+    assert body["messages"][0]["role"] == "user"
+    assert body["messages"][1]["role"] == "assistant"
+
+
+async def test_get_conversation_for_unknown_prediction_returns_empty(client, auth_headers):
+    response = await client.get(
+        "/api/v1/rag/conversations/00000000-0000-0000-0000-000000000000",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["messages"] == []
+
+
+async def test_get_conversation_is_scoped_per_user(client, auth_headers):
+    files = {"file": ("leaf.jpg", _make_jpeg_bytes(), "image/jpeg")}
+    upload = await client.post("/api/v1/upload", headers=auth_headers, files=files)
+    image_id = upload.json()["image_id"]
+
+    predict = await client.post(
+        "/api/v1/predict", headers=auth_headers, json={"image_id": image_id, "top_k": 1}
+    )
+    prediction_id = predict.json()["prediction_id"]
+
+    await client.post(
+        "/api/v1/rag/query",
+        headers=auth_headers,
+        json={"message": "Tell me about this", "image_id": image_id},
+    )
+
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": "watcher@example.com", "password": "Str0ng!Pass", "full_name": "Watcher"},
+    )
+    login = await client.post(
+        "/api/v1/auth/login", json={"email": "watcher@example.com", "password": "Str0ng!Pass"}
+    )
+    other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    response = await client.get(
+        f"/api/v1/rag/conversations/{prediction_id}", headers=other_headers
+    )
+    assert response.status_code == 200
+    assert response.json()["messages"] == []
+
+
+async def test_get_conversation_requires_authentication(client):
+    response = await client.get(
+        "/api/v1/rag/conversations/00000000-0000-0000-0000-000000000000"
+    )
+    assert response.status_code in (401, 403)

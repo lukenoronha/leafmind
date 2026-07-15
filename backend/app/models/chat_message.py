@@ -11,6 +11,7 @@ from app.db.base import Base
 from app.models.mixins import GUID, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.prediction import Prediction
     from app.models.uploaded_image import UploadedImage
     from app.models.user import User
 
@@ -33,6 +34,14 @@ class ChatMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     nullable so pre-Sprint-4 rows (and non-grounded turns, e.g. the user's own
     messages) remain valid without a backfill; they're only populated on
     assistant turns that went through `RAGService.retrieve()`.
+
+    `prediction_id` (Sprint 8) is additive/nullable for the same reason —
+    it's derived server-side from `image_id`'s most recent prediction at
+    send-time (see `RAGService.send_message`), not supplied by the client,
+    so rows persisted before this existed simply have it as NULL. It exists
+    so a conversation can be grouped/reopened by prediction, matching how
+    the frontend's Chat History page already keys conversations client-side
+    (see `frontend/src/lib/chat-storage.ts`).
     """
 
     __tablename__ = "chat_messages"
@@ -48,6 +57,11 @@ class ChatMessage(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         GUID(), ForeignKey("uploaded_images.id", ondelete="SET NULL"), nullable=True, index=True
     )
     image: Mapped["UploadedImage | None"] = relationship(back_populates="chat_messages")
+
+    prediction_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID(), ForeignKey("predictions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    prediction: Mapped["Prediction | None"] = relationship()
 
     role: Mapped[ChatRole] = mapped_column(Enum(ChatRole, native_enum=False, length=20), nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)
