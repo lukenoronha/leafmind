@@ -136,7 +136,7 @@ export function ChatPanel({
   return (
     <div
       className={cn(
-        'mx-auto flex w-full max-w-160 flex-col gap-6 xl:max-w-170',
+        'mx-auto flex w-full max-w-160 flex-col gap-6 xl:max-w-170 2xl:max-w-200',
         className,
       )}
     >
@@ -210,12 +210,18 @@ export function ChatPanel({
         />
       ) : null}
 
-      <ChatInput
-        onSend={onSendMessage}
-        onAttachImage={onAttachImage}
-        attachDisabled={attachDisabled}
-        disabled={isSending}
-      />
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-center text-xs text-balance">
+          AI-generated responses are grounded using trusted reference sources.
+          Always verify medicinal usage with qualified professionals.
+        </p>
+        <ChatInput
+          onSend={onSendMessage}
+          onAttachImage={onAttachImage}
+          attachDisabled={attachDisabled}
+          disabled={isSending}
+        />
+      </div>
     </div>
   )
 }
