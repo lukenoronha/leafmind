@@ -197,31 +197,35 @@ export default function HomePage() {
     setInspector({ open: true, predictionId, tab })
   }
 
+  const isFeedEmpty = combinedFeed.length === 0
+
   return (
     <div className="flex h-[calc(100svh-3.5rem-3rem)] flex-col gap-6">
-      <div className="print:hidden">
-        <PageHeader
-          title="New Analysis"
-          description={
-            latestPrediction
-              ? `Identified as ${latestPrediction.plantName}. Ask about its medicinal properties, safety, or traditional uses.`
-              : 'Attach a leaf photo to identify the plant and ask questions about it.'
-          }
-          actions={
-            latestPrediction ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => window.print()}
-              >
-                <Printer />
-                Download PDF
-              </Button>
-            ) : null
-          }
-        />
-      </div>
+      {!isFeedEmpty ? (
+        <div className="print:hidden">
+          <PageHeader
+            title="New Analysis"
+            description={
+              latestPrediction
+                ? `Identified as ${latestPrediction.plantName}. Ask about its medicinal properties, safety, or traditional uses.`
+                : 'Attach a leaf photo to identify the plant and ask questions about it.'
+            }
+            actions={
+              latestPrediction ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.print()}
+                >
+                  <Printer />
+                  Download PDF
+                </Button>
+              ) : null
+            }
+          />
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-0">
         <ChatPanel
