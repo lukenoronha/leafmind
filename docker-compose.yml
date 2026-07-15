@@ -21,7 +21,11 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://leafmind:leafmind@postgres:5432/leafmind
-      CORS_ORIGINS: http://leafmind.local,http://localhost:5173,https://*.trycloudflare.com,https://*.ngrok-free.app
+      # Wildcard ngrok subdomains are matched via allow_origin_regex in
+      # app/main.py instead — CORSMiddleware's allow_origins only supports
+      # exact string matches, so a "*.ngrok-free.app" entry here would
+      # silently never match anything.
+      CORS_ORIGINS: http://leafmind.local,http://localhost:5173,http://100.66.5.122
     ports:
       - "8000:8000"
     volumes:
