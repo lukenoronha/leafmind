@@ -35,6 +35,7 @@ def build_classification_prompt(
     candidate_labels: list[str],
     top_k: int,
     has_few_shot_examples: bool = False,
+    top_retrieval_label: str | None = None,
     trained_classifier_hint: tuple[str, float] | None = None,
 ) -> str:
     """User-turn text prompt instructing the model to classify a leaf image.
@@ -43,6 +44,16 @@ def build_classification_prompt(
     dataset taxonomy (see `app.datasets.loader`) to bias it toward answers
     that are actually in-scope for this system, while still allowing an
     "other/unknown" fallback so it isn't forced into a wrong forced choice.
+
+    Frames the model as a *verifier* over the CLIP few-shot retrieval's top
+    match rather than a free-choice classifier: an audit across 10 known
+    training images found the model's final answer disagreed with a
+    *correct* top-1 retrieval in cases where it had no strong basis to, and
+    did so with high self-reported confidence — i.e. it was overriding good
+    retrieval evidence with weaker reasoning of its own. Retrieval's own
+    top-1 accuracy (~70% in that audit) is higher than the ungrounded
+    zero-shot baseline, so defaulting to it unless there's clear
+    contradicting evidence is the better prior.
     """
     labels_block = "\n".join(f"- {label}" for label in candidate_labels)
     schema_example = json.dumps(
@@ -56,7 +67,7 @@ def build_classification_prompt(
     few_shot_preamble = (
         "Above are labeled reference images of known species, each followed by its "
         "correct label, retrieved because they are visually similar to the new leaf "
-        "below. Use them as few-shot examples grounding your identification.\n\n"
+        "below (most similar first).\n\n"
         if has_few_shot_examples
         else ""
     )
@@ -65,13 +76,24 @@ def build_classification_prompt(
         hint_label, hint_confidence = trained_classifier_hint
         classifier_hint_block = (
             "A separate classifier trained on labeled reference images of these "
-            f"species predicts '{hint_label}' with {hint_confidence:.0%} confidence. "
-            "Treat this as one additional signal, not a guaranteed answer — weigh it "
-            "against the visual evidence yourself.\n\n"
+            f"species predicts '{hint_label}' with {hint_confidence:.0%} confidence.\n\n"
+        )
+    verification_instruction = ""
+    if top_retrieval_label is not None:
+        verification_instruction = (
+            f"The single most visually similar reference image is labeled '{top_retrieval_label}'. "
+            "Treat this as your default answer. Examine the new leaf against it carefully: "
+            "if the shape, margin, venation, color, and texture genuinely match, confirm "
+            f"'{top_retrieval_label}' as your top candidate. Only choose a different species if you "
+            "can point to a specific, concrete visual mismatch between the new leaf and that "
+            "reference — a vague sense that another candidate 'looks similar' is not enough to "
+            "override it. If you are not confident enough to either confirm the match or identify "
+            "a specific mismatch, prefer the retrieved label over guessing.\n\n"
         )
     return (
         f"{few_shot_preamble}"
         f"{classifier_hint_block}"
+        f"{verification_instruction}"
         "Identify the medicinal plant species shown in this leaf image.\n\n"
         f"Known candidate species (prefer one of these if it plausibly matches):\n{labels_block}\n\n"
         f"Return exactly the top {top_k} most likely candidates, ranked most to least likely, "
@@ -119,6 +141,7 @@ def build_classification_messages(
                 candidate_labels=candidate_labels,
                 top_k=top_k,
                 has_few_shot_examples=bool(few_shot_examples),
+                top_retrieval_label=few_shot_examples[0][1] if few_shot_examples else None,
                 trained_classifier_hint=trained_classifier_hint,
             ),
         }
