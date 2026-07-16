@@ -90,3 +90,26 @@ class HistoryResponse(BaseModel):
 
 class UpdatePredictionSaveRequest(BaseModel):
     is_saved: bool
+
+
+class PredictionDetailResponse(BaseModel):
+    """Full single-prediction detail — used to reopen a past analysis session
+    from History/Saved Reports. Unlike `HistoryItem` (a slim list row), this
+    includes the same fields `PredictResponse` returns at creation time
+    (candidates, timing, token counts), so a reopened session can render the
+    same prediction card as a live one.
+    """
+
+    prediction_id: uuid.UUID
+    image_id: uuid.UUID
+    original_filename: str
+    predicted_label: str
+    confidence: float
+    candidates: list[CandidateResponse]
+    model_name: str
+    preprocessing_ms: float
+    inference_ms: float
+    created_at: datetime
+    is_saved: bool
+    status: str = "confident"
+    message: str | None = None

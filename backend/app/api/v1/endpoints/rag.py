@@ -99,12 +99,14 @@ async def get_conversation(
     )
     return ConversationResponse(
         prediction_id=prediction_id,
+        conversation_id=messages[0].conversation_id if messages else None,
         messages=[
             ConversationMessageResponse(
                 id=msg.id,
                 role=msg.role.value,
                 content=msg.content,
                 created_at=msg.created_at,
+                conversation_id=msg.conversation_id,
                 sources=[
                     PersistedSourceResponse(**source)
                     for source in (msg.retrieved_sources or [])

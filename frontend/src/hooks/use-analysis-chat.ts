@@ -26,12 +26,20 @@ function createMessage(
  * loading state, rather than a staged retrieval pipeline. Conversation
  * history is persisted to localStorage per prediction ID so it survives
  * navigation/refresh.
+ *
+ * When localStorage has nothing for this prediction (a fresh browser, a
+ * cleared cache, or a session reopened from History/Saved Reports on a
+ * different device), this hook falls back to fetching the persisted
+ * conversation from the server (GET /rag/conversations/{id}) — including
+ * the conversation_id those turns share, so a follow-up message correctly
+ * continues the same thread instead of starting a new one.
  */
 export function useAnalysisChat(predictionId: string, imageId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     chatStorage.load(predictionId),
   )
   const [isSending, setIsSending] = useState(false)
+  const [isHydrating, setIsHydrating] = useState(false)
   const [conversationId, setConversationId] = useState<string | undefined>()
   // Tracks whether the "no prediction yet" notice has already been shown
   // for the current (missing) prediction, so repeated Send presses append
@@ -60,6 +68,38 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
   // latest render.
   const latestPredictionIdRef = useRef(predictionId)
   latestPredictionIdRef.current = predictionId
+
+  useEffect(() => {
+    if (!predictionId) return
+    // Only hydrate from the server when localStorage truly has nothing —
+    // a browser with a local copy already has the fuller (live) message
+    // shape (real citation excerpt text), which the server fallback can't
+    // reconstruct (see getConversation's doc comment).
+    if (chatStorage.load(predictionId).length > 0) return
+
+    let cancelled = false
+    setIsHydrating(true)
+    analysisService
+      .getConversation(predictionId)
+      .then((result) => {
+        if (cancelled || predictionId !== latestPredictionIdRef.current) return
+        if (result.messages.length > 0) {
+          setMessages(result.messages)
+          setConversationId(result.conversationId ?? undefined)
+        }
+      })
+      .catch(() => {
+        // Non-fatal — the session just opens with an empty conversation,
+        // same as any other prediction with no chat history yet.
+      })
+      .finally(() => {
+        if (!cancelled) setIsHydrating(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [predictionId])
 
   useEffect(() => {
     chatStorage.save(predictionId, messages)
@@ -136,5 +176,6 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
     messages,
     sendMessage,
     isSending,
+    isHydrating,
   }
 }
