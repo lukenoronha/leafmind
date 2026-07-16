@@ -96,10 +96,8 @@ export interface HistoryItem {
 
 /**
  * One row in History/Saved Reports. `saved` reflects the backend's
- * `predictions.is_saved` flag (`GET /history` / `GET /history?saved=true`).
- * There is no UI control yet to actually set it — see
- * `PATCH /predictions/{id}/save` — so it will read `false` for every
- * existing prediction until a save action is added to the UI.
+ * `predictions.is_saved` flag (`GET /history` / `GET /history?saved=true`),
+ * settable via `analysisService.setSaved()` (`PATCH /predictions/{id}/save`).
  * `image` has no URL — the backend has no endpoint that serves uploaded
  * image bytes back by ID, only a `GET /history` metadata listing.
  */
@@ -110,6 +108,7 @@ export interface AnalysisSession {
     id: string
     plantName: string
     confidence: number
+    status: PredictionStatus
   }
   createdAt: string
   saved: boolean

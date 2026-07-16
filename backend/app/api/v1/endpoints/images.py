@@ -9,6 +9,7 @@ import uuid
 from fastapi import APIRouter, File, UploadFile, status
 
 from app.api.deps import CurrentUserDep, ImageAnalysisServiceDep
+from app.schemas.auth import MessageResponse
 from app.schemas.images import (
     HistoryItem,
     HistoryResponse,
@@ -131,3 +132,20 @@ async def set_prediction_saved(
         created_at=prediction.created_at,
         status=prediction.status.value,
     )
+
+
+@router.delete(
+    "/predictions/{prediction_id}",
+    response_model=MessageResponse,
+    summary="Permanently delete a prediction",
+    description="Removes a past prediction (and its chat sources/candidates) "
+    "from history and Saved Reports. Only the prediction's owner may delete "
+    "it. The underlying uploaded image is not deleted.",
+)
+async def delete_prediction(
+    prediction_id: uuid.UUID,
+    current_user: CurrentUserDep,
+    service: ImageAnalysisServiceDep,
+) -> MessageResponse:
+    await service.delete_prediction(user=current_user, prediction_id=prediction_id)
+    return MessageResponse(message="Prediction deleted.")

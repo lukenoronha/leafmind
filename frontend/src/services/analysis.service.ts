@@ -84,6 +84,7 @@ interface BackendHistoryItem {
   model_name: string
   is_saved: boolean
   created_at: string
+  status?: PredictionStatus
 }
 
 interface BackendHistoryResponse {
@@ -203,6 +204,7 @@ function toAnalysisSession(data: BackendHistoryItem): AnalysisSession {
       id: data.prediction_id,
       plantName: data.predicted_label,
       confidence: data.confidence,
+      status: data.status ?? 'confident',
     },
     createdAt: data.created_at,
     saved: data.is_saved,
@@ -276,6 +278,20 @@ export const analysisService = {
       params: { saved: true },
     })
     return data.items.map(toAnalysisSession)
+  },
+
+  /** Bookmarks or unbookmarks a prediction (PATCH /predictions/{id}/save). */
+  setSaved: async (predictionId: string, isSaved: boolean): Promise<AnalysisSession> => {
+    const { data } = await apiClient.patch<BackendHistoryItem>(
+      `/predictions/${predictionId}/save`,
+      { is_saved: isSaved },
+    )
+    return toAnalysisSession(data)
+  },
+
+  /** Permanently removes a prediction from History/Saved Reports. */
+  deletePrediction: async (predictionId: string): Promise<void> => {
+    await apiClient.delete(`/predictions/${predictionId}`)
   },
 
   /**
@@ -366,5 +382,14 @@ export const analysisService = {
         text: chunk.text,
       })),
     }
+  },
+
+  /** Server-generated PDF for a prediction's report (reportlab, backend-rendered — no client-side PDF generation). */
+  getPredictionReportPdf: async (predictionId: string): Promise<Blob> => {
+    const { data } = await apiClient.get<Blob>(
+      `/reports/prediction/${predictionId}`,
+      { params: { format: 'pdf' }, responseType: 'blob' },
+    )
+    return data
   },
 }

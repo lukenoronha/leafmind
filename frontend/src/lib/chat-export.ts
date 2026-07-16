@@ -1,14 +1,5 @@
 import type { ChatMessage } from '@/types/analysis'
-
-function downloadBlob(content: string, filename: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
+import { downloadBlob } from '@/lib/download'
 
 export function exportChatAsJson(
   plantName: string,
