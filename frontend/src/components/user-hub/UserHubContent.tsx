@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   BookMarked,
@@ -209,11 +208,7 @@ export function UserHubContent({
           <HubActionButton
             icon={LifeBuoy}
             label="Help"
-            onClick={() =>
-              toast('Help & feedback', {
-                description: 'Coming soon — no support channel is wired up yet.',
-              })
-            }
+            onClick={() => onNavigate(ROUTES.help)}
           />
         </nav>
       </motion.div>

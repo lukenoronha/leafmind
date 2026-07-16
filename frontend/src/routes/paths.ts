@@ -14,5 +14,6 @@ export const ROUTES = {
   developer: '/developer',
   admin: '/admin',
   settings: '/settings',
+  help: '/help',
   notFound: '*',
 } as const

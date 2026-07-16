@@ -32,6 +32,7 @@ const UserPage = lazy(() => import('@/pages/user/UserPage'))
 const DeveloperPage = lazy(() => import('@/pages/developer/DeveloperPage'))
 const AdminPage = lazy(() => import('@/pages/admin/AdminPage'))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage'))
+const HelpPage = lazy(() => import('@/pages/help/HelpPage'))
 
 function withSuspense(element: ReactNode) {
   return (
@@ -98,6 +99,7 @@ export const router = createBrowserRouter([
             path: ROUTES.settings,
             element: withSuspense(<SettingsPage />),
           },
+          { path: ROUTES.help, element: withSuspense(<HelpPage />) },
           {
             element: <RoleGuard allowedRoles={['developer', 'admin']} />,
             children: [
