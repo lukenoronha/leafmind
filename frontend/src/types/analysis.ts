@@ -84,14 +84,16 @@ export interface ChatMessage {
   isPending?: boolean
 }
 
-export interface HistoryItem {
-  predictionId: string
-  imageId: string
+/**
+ * Full single-prediction detail (`GET /predictions/{id}`) — unlike a plain
+ * `Prediction` (returned live from `/predict`), this also carries the
+ * original image's filename and the saved flag, everything a reopened
+ * History/Saved Reports session needs to render the same prediction card a
+ * live session would.
+ */
+export interface PredictionDetail extends Prediction {
   originalFilename: string
-  predictedLabel: string
-  confidence: number
-  modelVersion: string
-  createdAt: string
+  isSaved: boolean
 }
 
 /**

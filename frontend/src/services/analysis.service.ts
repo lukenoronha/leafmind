@@ -3,8 +3,8 @@ import { apiClient } from '@/lib/api-client'
 import type {
   AnalysisSession,
   ChatMessage,
-  HistoryItem,
   Prediction,
+  PredictionDetail,
   PredictionReport,
   PredictionStatus,
   Source,
@@ -40,6 +40,14 @@ export interface ChatPayload {
 export interface ChatSendResult {
   message: ChatMessage
   conversationId: string
+}
+
+/** Return shape of getConversation — the messages plus the conversation_id
+ * they share, so a caller can pass it back into sendChatMessage to continue
+ * the same thread rather than starting a new one. */
+export interface ConversationResult {
+  messages: ChatMessage[]
+  conversationId: string | null
 }
 
 // --- Backend schemas (snake_case) — see backend/app/schemas/images.py, rag.py ---
@@ -146,12 +154,30 @@ interface BackendConversationMessage {
   role: string
   content: string
   created_at: string
+  conversation_id: string
   sources: BackendPersistedSource[]
 }
 
 interface BackendConversationResponse {
   prediction_id: string
+  conversation_id: string | null
   messages: BackendConversationMessage[]
+}
+
+interface BackendPredictionDetailResponse {
+  prediction_id: string
+  image_id: string
+  original_filename: string
+  predicted_label: string
+  confidence: number
+  candidates: BackendCandidate[]
+  model_name: string
+  preprocessing_ms: number
+  inference_ms: number
+  created_at: string
+  is_saved: boolean
+  status?: PredictionStatus
+  message?: string | null
 }
 
 function toUploadedImage(data: BackendUploadResponse): UploadedImage {
@@ -181,18 +207,6 @@ function toPrediction(data: BackendPredictResponse): Prediction {
     predictedAt: data.created_at,
     status: data.status ?? 'confident',
     message: data.message ?? null,
-  }
-}
-
-function toHistoryItem(data: BackendHistoryItem): HistoryItem {
-  return {
-    predictionId: data.prediction_id,
-    imageId: data.image_id,
-    originalFilename: data.original_filename,
-    predictedLabel: data.predicted_label,
-    confidence: data.confidence,
-    modelVersion: data.model_name,
-    createdAt: data.created_at,
   }
 }
 
@@ -261,13 +275,6 @@ export const analysisService = {
     return toPrediction(data)
   },
 
-  getHistoryItems: async (limit = 20, offset = 0): Promise<HistoryItem[]> => {
-    const { data } = await apiClient.get<BackendHistoryResponse>('/history', {
-      params: { limit, offset },
-    })
-    return data.items.map(toHistoryItem)
-  },
-
   getHistory: async (): Promise<AnalysisSession[]> => {
     const { data } = await apiClient.get<BackendHistoryResponse>('/history')
     return data.items.map(toAnalysisSession)
@@ -330,10 +337,10 @@ export const analysisService = {
   /**
    * Reopens a conversation by prediction ID from the server, for a browser
    * whose localStorage copy (see chat-storage.ts) was cleared or never
-   * existed. Only turns sent after the backend started recording
+   * existed, or for a session opened from History/Saved Reports on a
+   * different device. Only turns sent after the backend started recording
    * prediction_id are linkable this way — older conversations return an
-   * empty array rather than an error. Not called by any component yet;
-   * ready for whenever Chat History grows a "reopen from server" fallback.
+   * empty array rather than an error.
    *
    * Note: unlike sendChatMessage's live sources, the backend only persists
    * chunk/document identity + score for a past turn, not the retrieved
@@ -341,25 +348,55 @@ export const analysisService = {
    * that relies on the excerpt text (e.g. SourcesPanel) would need that
    * backfilled server-side before this is wired into a real component.
    */
-  getConversation: async (predictionId: string): Promise<ChatMessage[]> => {
+  getConversation: async (predictionId: string): Promise<ConversationResult> => {
     const { data } = await apiClient.get<BackendConversationResponse>(
       `/rag/conversations/${predictionId}`,
     )
-    return data.messages.map((message) => ({
-      id: message.id,
-      role: message.role === 'assistant' ? 'assistant' : 'user',
-      content: message.content,
-      createdAt: message.created_at,
-      sources: message.sources.map((source) => ({
-        chunkId: source.chunk_id,
-        documentId: source.document_id,
-        documentName: source.document_name,
-        pageNumber: source.page_number,
-        chapter: source.chapter,
-        score: source.score,
-        text: '',
+    return {
+      conversationId: data.conversation_id,
+      messages: data.messages.map((message) => ({
+        id: message.id,
+        role: message.role === 'assistant' ? 'assistant' : 'user',
+        content: message.content,
+        createdAt: message.created_at,
+        sources: message.sources.map((source) => ({
+          chunkId: source.chunk_id,
+          documentId: source.document_id,
+          documentName: source.document_name,
+          pageNumber: source.page_number,
+          chapter: source.chapter,
+          score: source.score,
+          text: '',
+        })),
       })),
-    }))
+    }
+  },
+
+  /** Full detail for one past prediction (GET /predictions/{id}) — used to
+   * reopen a History/Saved Reports entry as a full session view. */
+  getPrediction: async (predictionId: string): Promise<PredictionDetail> => {
+    const { data } = await apiClient.get<BackendPredictionDetailResponse>(
+      `/predictions/${predictionId}`,
+    )
+    return {
+      id: data.prediction_id,
+      imageId: data.image_id,
+      plantName: data.predicted_label,
+      confidence: data.confidence,
+      candidates: data.candidates.map((c) => ({
+        label: c.label,
+        confidence: c.confidence,
+        reasoning: c.reasoning,
+      })),
+      modelVersion: data.model_name,
+      preprocessingMs: data.preprocessing_ms,
+      inferenceMs: data.inference_ms,
+      predictedAt: data.created_at,
+      status: data.status ?? 'confident',
+      message: data.message ?? null,
+      originalFilename: data.original_filename,
+      isSaved: data.is_saved,
+    }
   },
 
   /** Related knowledge-base excerpts + disclaimer for a prediction's report. */

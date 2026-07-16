@@ -322,6 +322,20 @@ class ImageAnalysisService:
 
         return PredictionStatus.CONFIDENT
 
+    async def get_prediction_detail(
+        self, *, user: User, prediction_id: uuid.UUID
+    ) -> tuple[Prediction, UploadedImage]:
+        """Single-prediction lookup — used to reopen a past analysis session
+        from History/Saved Reports. `/history` only returns a slim list row
+        per prediction; this returns the same full detail `/predict` does.
+        """
+        prediction = await self.db.get(Prediction, prediction_id)
+        if prediction is None or prediction.user_id != user.id:
+            raise PredictionNotFoundError()
+
+        image = await self.db.get(UploadedImage, prediction.image_id)
+        return prediction, image
+
     async def get_history(
         self, *, user: User, limit: int = 20, offset: int = 0, saved_only: bool = False
     ) -> tuple[list[tuple[Prediction, UploadedImage]], int]:

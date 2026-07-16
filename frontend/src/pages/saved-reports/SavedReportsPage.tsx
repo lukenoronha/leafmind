@@ -25,7 +25,7 @@ import {
 import { analysisService } from '@/services/analysis.service'
 import { exportReportAsJson, downloadReportPdf } from '@/lib/report-export'
 import { getApiErrorMessage } from '@/lib/api-error'
-import { ROUTES } from '@/routes/paths'
+import { ROUTES, analysisSessionRoute } from '@/routes/paths'
 import type { AnalysisSession } from '@/types/analysis'
 
 type SortOption =
@@ -245,7 +245,7 @@ export default function SavedReportsPage() {
               key={session.id}
               session={session}
               onOpenReport={setViewing}
-              onOpenAnalysis={() => navigate(ROUTES.home)}
+              onOpenAnalysis={(s) => navigate(analysisSessionRoute(s.id))}
               onDownloadPdf={handleDownloadPdf}
               onExportJson={handleExportJson}
               onUnsave={handleUnsave}

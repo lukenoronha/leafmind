@@ -16,7 +16,7 @@ import { SourcesPanel } from '@/components/analysis/chat/SourcesPanel'
 import { PredictionConfidenceBadge } from '@/components/analysis/chat/PredictionConfidenceBadge'
 import { analysisService } from '@/services/analysis.service'
 import { exportReportAsJson } from '@/lib/report-export'
-import { ROUTES } from '@/routes/paths'
+import { analysisSessionRoute } from '@/routes/paths'
 import type { AnalysisSession, Source } from '@/types/analysis'
 
 interface ReportDetailDialogProps {
@@ -118,7 +118,7 @@ export function ReportDetailDialog({
 
             <DialogFooter className="flex-row flex-wrap items-center justify-end gap-2 sm:justify-end">
               <Button variant="outline" size="sm" asChild>
-                <Link to={ROUTES.home}>Open Analysis</Link>
+                <Link to={analysisSessionRoute(session.id)}>Open Analysis</Link>
               </Button>
               <Button
                 variant="outline"

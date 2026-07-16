@@ -3,7 +3,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { RoleGuard } from '@/routes/RoleGuard'
-import { ROUTES } from '@/routes/paths'
+import { ANALYSIS_SESSION_PATH, ROUTES } from '@/routes/paths'
 import { Loader } from '@/components/common/Loader'
 import RouteErrorPage from '@/pages/errors/RouteErrorPage'
 
@@ -20,6 +20,9 @@ import UnauthorizedPage from '@/pages/errors/UnauthorizedPage'
 import NotFoundPage from '@/pages/errors/NotFoundPage'
 
 const HomePage = lazy(() => import('@/pages/HomePage'))
+const AnalysisSessionPage = lazy(
+  () => import('@/pages/analysis-session/AnalysisSessionPage'),
+)
 const HistoryPage = lazy(() => import('@/pages/history/HistoryPage'))
 const SavedReportsPage = lazy(
   () => import('@/pages/saved-reports/SavedReportsPage'),
@@ -81,6 +84,10 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: ROUTES.home, element: withSuspense(<HomePage />) },
+          {
+            path: ANALYSIS_SESSION_PATH,
+            element: withSuspense(<AnalysisSessionPage />),
+          },
           { path: ROUTES.history, element: withSuspense(<HistoryPage />) },
           {
             path: ROUTES.savedReports,

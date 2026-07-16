@@ -113,9 +113,15 @@ class ConversationMessageResponse(BaseModel):
     role: str
     content: str
     created_at: datetime
+    conversation_id: uuid.UUID
     sources: list[PersistedSourceResponse] = Field(default_factory=list)
 
 
 class ConversationResponse(BaseModel):
     prediction_id: uuid.UUID
+    # The conversation_id shared by every message below (None if there are no
+    # messages yet) — lets a reopened session pass this back into
+    # POST /rag/query so a follow-up question appends to the same thread
+    # instead of starting a new one.
+    conversation_id: uuid.UUID | None
     messages: list[ConversationMessageResponse]

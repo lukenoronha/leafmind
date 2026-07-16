@@ -11,8 +11,11 @@ from fastapi import APIRouter, File, UploadFile, status
 from app.api.deps import CurrentUserDep, ImageAnalysisServiceDep
 from app.schemas.auth import MessageResponse
 from app.schemas.images import (
+    _LOW_CONFIDENCE_MESSAGE,
+    CandidateResponse,
     HistoryItem,
     HistoryResponse,
+    PredictionDetailResponse,
     PredictRequest,
     PredictResponse,
     UpdatePredictionSaveRequest,
@@ -131,6 +134,41 @@ async def set_prediction_saved(
         is_saved=prediction.is_saved,
         created_at=prediction.created_at,
         status=prediction.status.value,
+    )
+
+
+@router.get(
+    "/predictions/{prediction_id}",
+    response_model=PredictionDetailResponse,
+    summary="Get full detail for one past prediction",
+    description="Returns the same full detail `/predict` does (candidates, "
+    "timing) for a single past prediction, so a History/Saved Reports entry "
+    "can reopen its original analysis session. Only the prediction's owner "
+    "may fetch it.",
+)
+async def get_prediction_detail(
+    prediction_id: uuid.UUID,
+    current_user: CurrentUserDep,
+    service: ImageAnalysisServiceDep,
+) -> PredictionDetailResponse:
+    prediction, image = await service.get_prediction_detail(
+        user=current_user, prediction_id=prediction_id
+    )
+    is_low_confidence = prediction.status.value == "low_confidence"
+    return PredictionDetailResponse(
+        prediction_id=prediction.id,
+        image_id=image.id,
+        original_filename=image.original_filename,
+        predicted_label=prediction.predicted_label,
+        confidence=prediction.confidence,
+        candidates=[CandidateResponse(**c) for c in prediction.candidates],
+        model_name=prediction.model_name,
+        preprocessing_ms=prediction.preprocessing_ms,
+        inference_ms=prediction.inference_ms,
+        created_at=prediction.created_at,
+        is_saved=prediction.is_saved,
+        status=prediction.status.value,
+        message=_LOW_CONFIDENCE_MESSAGE if is_low_confidence else None,
     )
 
 
