@@ -27,3 +27,6 @@ class StatusResponse(BaseModel):
     environment: str
     timestamp: datetime = Field(default_factory=_utcnow)
     dependencies: list[DependencyStatus]
+    cuda_available: bool = False
+    cuda_device_name: str | None = None
+    vram_allocated_mb: float | None = None

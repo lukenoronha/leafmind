@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { analysisService } from '@/services/analysis.service'
 import { chatStorage } from '@/lib/chat-storage'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { generateUUID } from '@/lib/utils'
 import type { ChatMessage } from '@/types/analysis'
 
 function createMessage(
@@ -10,7 +11,7 @@ function createMessage(
   extra?: Partial<ChatMessage>,
 ): ChatMessage {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     role,
     content,
     createdAt: new Date().toISOString(),
@@ -169,7 +170,7 @@ export function useAnalysisChat(predictionId: string, imageId?: string) {
         }
       }
     },
-    [predictionId, imageId, conversationId],
+    [predictionId, imageId, conversationId, noPredictionNoticeShown],
   )
 
   return {

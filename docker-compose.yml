@@ -26,6 +26,16 @@ services:
       # exact string matches, so a "*.ngrok-free.app" entry here would
       # silently never match anything.
       CORS_ORIGINS: http://leafmind.local,http://localhost:5173,http://100.66.5.122
+      # The VLM/embedding models are large (~7GB) and only need to be
+      # fetched once — HF_HOME persists them in the named volume below
+      # across container recreates, and HF_HUB_OFFLINE skips the
+      # network freshness-check `from_pretrained` does by default (which
+      # otherwise hangs/retries for minutes whenever huggingface.co is
+      # slow or unreachable, even though nothing has actually changed).
+      # Set HF_HUB_OFFLINE=0 here (or unset it) the first time you add a
+      # new model so it can be downloaded.
+      HF_HOME: /root/.cache/huggingface
+      HF_HUB_OFFLINE: "0"
     ports:
       - "8000:8000"
     volumes:
@@ -34,9 +44,24 @@ services:
       - backend_uploads:/app/uploads
       - backend_documents:/app/documents
       - backend_chroma:/app/chroma_data
+      - backend_hf_cache:/root/.cache/huggingface
     depends_on:
       postgres:
         condition: service_healthy
+    # Passes the host's NVIDIA GPU through to the container (requires the
+    # NVIDIA Container Toolkit / Docker Desktop's WSL2 GPU support — already
+    # confirmed working via `docker run --gpus all ... nvidia-smi`). Without
+    # this, torch.cuda.is_available() is always False inside the container
+    # even with a CUDA-enabled torch build installed, since no GPU device is
+    # visible to it at all — VLM_DEVICE/RAG_EMBEDDING_DEVICE's "auto" then
+    # has nothing to detect and silently falls back to CPU.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     command: >
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
@@ -64,30 +89,9 @@ services:
       - backend
       - frontend
 
-  tunnel:
-    image: ngrok/ngrok:latest
-    command: http nginx:80
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
-    ports:
-      - "4040:4040"
-    depends_on:
-      - nginx
-
-  deploy-webhook:
-    build: ./deploy-webhook
-    environment:
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
-      REPO_DIR: ${REPO_DIR:-/repo}
-      DEPLOY_BRANCH: main
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${REPO_DIR:-.}:${REPO_DIR:-/repo}
-    ports:
-      - "9000:9000"
-
 volumes:
   postgres_data:
   backend_uploads:
   backend_documents:
   backend_chroma:
+  backend_hf_cache:

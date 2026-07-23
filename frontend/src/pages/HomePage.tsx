@@ -16,6 +16,7 @@ import { usePredict } from '@/hooks/use-predict'
 import { useAnalysisChat } from '@/hooks/use-analysis-chat'
 import { analysisService } from '@/services/analysis.service'
 import { getApiErrorMessage } from '@/lib/api-error'
+import { generateUUID } from '@/lib/utils'
 import type { Prediction, PredictionReport } from '@/types/analysis'
 
 /**
@@ -94,7 +95,7 @@ export default function HomePage() {
       updateImageItem(imageItemId, { status: 'done' })
       setFeed((prev) => [
         ...prev,
-        { type: 'prediction', id: crypto.randomUUID(), prediction },
+        { type: 'prediction', id: generateUUID(), prediction },
       ])
 
       // A new prediction changes both History and Saved Reports (the new
@@ -201,7 +202,7 @@ export default function HomePage() {
   function handleSendMessage(message: string) {
     if (pendingAttachment) {
       const { file, previewUrl } = pendingAttachment
-      const imageItemId = crypto.randomUUID()
+      const imageItemId = generateUUID()
 
       setPendingAttachment(null)
       setFeed((prev) => [

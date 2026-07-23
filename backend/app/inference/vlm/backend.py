@@ -98,21 +98,34 @@ class HFQwenVLBackend:
                     previous,
                 )
 
-            dtype = "auto" if self._settings.VLM_DTYPE == "auto" else getattr(torch, self._settings.VLM_DTYPE)
+            dtype = torch.bfloat16 if getattr(torch.cuda, "is_bf16_supported", lambda: False)() else torch.float16
 
             try:
-                self._model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                     self.model_name,
                     torch_dtype=dtype,
                     device_map=self._settings.VLM_DEVICE,
+                    attn_implementation="sdpa",
                 )
-                self._processor = AutoProcessor.from_pretrained(
+                processor = AutoProcessor.from_pretrained(
                     self.model_name,
                     min_pixels=self._settings.VLM_MIN_PIXELS,
                     max_pixels=self._settings.VLM_MAX_PIXELS,
                 )
             except Exception as exc:
+                # Only commit to self._model/self._processor once BOTH loads
+                # succeed. Assigning self._model as soon as the first
+                # from_pretrained call returns (and only catching errors
+                # around the pair) would leave the guard at the top of this
+                # method — `if self._model is not None: return` — permanently
+                # short-circuiting future calls after a processor-only
+                # failure, silently "succeeding" with no processor and
+                # crashing every subsequent generate() call instead of
+                # retrying the load as callers (e.g. warm_up()) expect.
                 raise VLMBackendError(f"Failed to load model '{self.model_name}': {exc}") from exc
+
+            self._model = model
+            self._processor = processor
 
             elapsed = time.perf_counter() - start
             logger.info("Qwen2.5-VL model loaded in {:.1f}s", elapsed)

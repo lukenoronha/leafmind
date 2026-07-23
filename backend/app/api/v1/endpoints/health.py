@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.deps import SettingsDep
 from app.db.session import check_database_connection
 from app.schemas.health import DependencyStatus, HealthResponse, StatusResponse
+import torch
 
 router = APIRouter(tags=["Health"])
 
@@ -31,6 +32,10 @@ async def health() -> HealthResponse:
 async def status_check(settings: SettingsDep) -> StatusResponse:
     db_healthy = await check_database_connection()
 
+    cuda_available = torch.cuda.is_available()
+    cuda_device_name = torch.cuda.get_device_name(0) if cuda_available else None
+    vram_allocated_mb = torch.cuda.memory_allocated(0) / (1024 ** 2) if cuda_available else None
+
     return StatusResponse(
         app_name=settings.APP_NAME,
         version=settings.APP_VERSION,
@@ -42,4 +47,7 @@ async def status_check(settings: SettingsDep) -> StatusResponse:
                 detail=None if db_healthy else "Unable to connect to the database",
             ),
         ],
+        cuda_available=cuda_available,
+        cuda_device_name=cuda_device_name,
+        vram_allocated_mb=vram_allocated_mb,
     )
