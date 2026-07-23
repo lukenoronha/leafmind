@@ -140,8 +140,20 @@ class RAGService:
         )
         self.db.add(user_message)
 
+        # Bias retrieval toward the identified species — the raw question
+        # alone ("what is the color of the leaf") carries no species signal,
+        # so unscoped semantic search can pull chunks from a different
+        # plant's section of the reference document and drift the model
+        # off the already-established identification (see prompt_builder's
+        # system instruction, which only fixes the *stated* species, not
+        # what context it's given to answer from).
+        retrieval_query = (
+            f"{latest_prediction.predicted_label}: {message}"
+            if latest_prediction
+            else message
+        )
         retrieval = self._retriever.retrieve(
-            message,
+            retrieval_query,
             top_k=top_k,
             similarity_threshold=similarity_threshold,
             max_context_chars=max_context_chars,
