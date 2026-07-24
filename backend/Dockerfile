@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gcc \
     g++ \
+    libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # requirements.txt is checked into the repo as UTF-16 (Windows editor artifact);
