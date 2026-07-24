@@ -2,7 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { Link, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import {
@@ -18,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { ROUTES } from '@/routes/paths'
 import { AuthLayout } from '@/pages/auth/AuthLayout'
 import { authService } from '@/services/auth.service'
-import { getApiErrorMessage } from '@/lib/api-error'
+import { classifyApiError, getApiErrorMessage } from '@/lib/api-error'
 
 const resetPasswordSchema = z
   .object({
@@ -44,6 +45,7 @@ type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -54,7 +56,19 @@ export default function ResetPasswordPage() {
     mutationFn: (password: string) =>
       authService.resetPassword({ token: token ?? '', password }),
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Unable to reset your password.'))
+      const kind = classifyApiError(error)
+      if (kind === 'network') {
+        toast.error('Network error. Check your connection and try again.')
+        return
+      }
+      if (kind === 'timeout' || kind === 'server') {
+        toast.error('Server unavailable. Please try again shortly.')
+        return
+      }
+      // Invalid/expired/used token — backend message is specific and useful.
+      form.setError('password', {
+        message: getApiErrorMessage(error, 'Unable to reset your password.'),
+      })
     },
   })
 
@@ -104,36 +118,65 @@ export default function ResetPasswordPage() {
           <FormField
             control={form.control}
             name="password"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>New password</FormLabel>
                 <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                    {...field}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      autoFocus
+                      disabled={mutation.isPending}
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={
+                        fieldState.error ? 'reset-password-error' : undefined
+                      }
+                      className="pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex items-center px-3"
+                      aria-label={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage id="reset-password-error" />
               </FormItem>
             )}
           />
           <FormField
             control={form.control}
             name="confirmPassword"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
                 <FormLabel>Confirm password</FormLabel>
                 <FormControl>
                   <Input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     autoComplete="new-password"
+                    disabled={mutation.isPending}
+                    aria-invalid={fieldState.invalid}
+                    aria-describedby={
+                      fieldState.error ? 'reset-confirm-password-error' : undefined
+                    }
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage id="reset-confirm-password-error" />
               </FormItem>
             )}
           />
